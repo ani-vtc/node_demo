@@ -33,7 +33,7 @@ app.get('/api/polygons', async (req, res) => {
         select: '*'
       });
     }
-
+    console.log(rows);
     // Convert rows to GeoJSON format
     const geoJson = {
       type: 'FeatureCollection',
