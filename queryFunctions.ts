@@ -94,4 +94,4 @@ export async function anyQuery({
   }
 }
 
-module.exports = { anyQuery }; 
+export default { anyQuery }; 
