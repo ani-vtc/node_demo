@@ -1,7 +1,6 @@
-import { MapContainer, TileLayer, GeoJSON, useMap, useMapEvents } from 'react-leaflet';
-import { useEffect, useState, useRef } from 'react';
+import { MapContainer, TileLayer, GeoJSON, useMap} from 'react-leaflet';
+import { useEffect, useState } from 'react';
 import type { LatLngExpression } from 'leaflet';
-import { Map as LeafletMap } from 'leaflet';
 
 const position: LatLngExpression = [49.2827, -123.1207]; // Adjust to your desired center
 
