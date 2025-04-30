@@ -1,9 +1,31 @@
-import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
-import { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, GeoJSON, useMap, useMapEvents } from 'react-leaflet';
+import { useEffect, useState, useRef } from 'react';
 import type { LatLngExpression } from 'leaflet';
 import { Map as LeafletMap } from 'leaflet';
 
 const position: LatLngExpression = [49.2827, -123.1207]; // Adjust to your desired center
+
+// Create a component to setup panes when the map is ready
+function SetupMapPanes() {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (!map.getPane('secondaryPane')) {
+      map.createPane('secondaryPane').style.zIndex = '650';
+    }
+    if (!map.getPane('elementaryPane')) {
+      map.createPane('elementaryPane').style.zIndex = '640';
+    }
+    if (!map.getPane('districtPane')) {
+      map.createPane('districtPane').style.zIndex = '680';
+    }
+    if (!map.getPane('defaultPane')) {
+      map.createPane('defaultPane').style.zIndex = '630';
+    }
+  }, [map]);
+  
+  return null;
+}
 
 const MapView = () => {
   const [geoJsonData, setGeoJsonData] = useState(null);
@@ -70,26 +92,12 @@ const MapView = () => {
   };
 
   return (
-<MapContainer
-  center={position}
-  zoom={13}
-  style={{ height: '100%', width: '100%' }}
-  whenReady={({ target }: { target: LeafletMap }) => {
-    if (!target.getPane('secondaryPane')) {
-      target.createPane('secondaryPane').style.zIndex = '650';
-    }
-    if (!target.getPane('elementaryPane')) {
-      target.createPane('elementaryPane').style.zIndex = '640';
-    }
-    if (!target.getPane('districtPane')) {
-        target.createPane('districtPane').style.zIndex = '680';
-    }
-    if (!target.getPane('defaultPane')) {
-      target.createPane('defaultPane').style.zIndex = '630';
-    }
-  }}
->
-
+    <MapContainer
+      center={position}
+      zoom={13}
+      style={{ height: '100%', width: '100%' }}
+    >
+      <SetupMapPanes />
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; OpenStreetMap contributors'
