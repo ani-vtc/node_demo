@@ -22,8 +22,6 @@ const dbConfig = {
 
 app.get('/polygons', async (req, res) => {
   try {
-    let rows;
-    
     if (process.env.ENV === 'dev') {
       const connection = await mysql.createConnection(dbConfig);
       const [rows] = await connection.execute('SELECT * FROM catchments'); // Adjust query as needed

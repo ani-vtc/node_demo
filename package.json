@@ -12,6 +12,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "fs": "^0.0.1-security",
     "leaflet": "^1.9.4",
     "mysql2": "^3.14.0",
     "react": "^19.0.0",
