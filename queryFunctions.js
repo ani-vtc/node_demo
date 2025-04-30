@@ -66,7 +66,7 @@ export async function anyQuery({
     // Parse the response
     if (apiResponse.ok) {
       const result = await apiResponse.json();
-      return result;
+      return [result];
     } else {
       const errorText = await apiResponse.text();
       console.error(`API request failed: ${errorText}`);
