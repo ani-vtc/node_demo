@@ -20,7 +20,7 @@ const dbConfig = {
   database: process.env.DB_NAME || 'schools',
 };
 
-app.get('/polygons', async (req, res) => {
+app.get('/api/polygons', async (req, res) => {
   try {
     let rows;
     if (process.env.ENV === 'dev') {

@@ -32,7 +32,7 @@ const MapView = () => {
   useEffect(() => {
     const fetchPolygons = async () => {
       try {
-        const response = await fetch('/polygons');
+        const response = await fetch('/api/polygons');
         const data = await response.json();
 
         // Log the column names from the first feature's properties
