@@ -11,7 +11,7 @@ const MapView = () => {
   useEffect(() => {
     const fetchPolygons = async () => {
       try {
-        const response = await fetch('http://localhost:5000/polygons');
+        const response = await fetch('/polygons');
         const data = await response.json();
 
         // Log the column names from the first feature's properties
@@ -31,7 +31,7 @@ const MapView = () => {
   }, []);
 
   // Function to dynamically style polygons based on Grade_Category
-  const getPolygonStyle = (feature) => {
+  const getPolygonStyle = (feature: any) => {
     const { Grade_Category, Level } = feature.properties;
   
     if (Grade_Category === 'Secondary') {
@@ -51,9 +51,9 @@ const MapView = () => {
     return { color: 'gray', weight: 2, fillColor: 'lightgray', fillOpacity: 0.5, pane: 'defaultPane' };
   };
 
-  const onEachFeature = (feature, layer) => {
+  const onEachFeature = (feature: any, layer: any) => {
     if (feature.properties && feature.properties.Level) {
-      layer.on('mouseover', (event) => {
+      layer.on('mouseover', (event: any) => {
         const { latlng } = event; // Get the mouse location
         layer.bindPopup(`Grade_Category: ${feature.properties.Grade_Category}`, {
           closeButton: false, // Disable the close button
