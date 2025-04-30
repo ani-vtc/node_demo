@@ -1,28 +1,12 @@
 /**
- * Interface for query options
- */
-interface QueryOptions {
-  /** Project ID (default: "magnetic-runway-428121") */
-  prj?: string;
-  /** Dataset ID (default: "schools") */
-  ds?: string;
-  /** Table name */
-  tbl?: string;
-  /** Fields to select (default: "*") */
-  select?: string;
-  /** Query conditions that will be concatenated */
-  conditions?: string[];
-}
-
-/**
- * Query response type
- */
-type QueryResponse = Record<string, any>[];
-
-/**
  * Query function for Google Cloud Run API 
- * @param options - Query configuration options
- * @returns Promise containing query results
+ * @param {Object} options - Query configuration
+ * @param {string} [options.prj="magnetic-runway-428121"] - Project ID
+ * @param {string} [options.ds="schools"] - Dataset ID
+ * @param {string} [options.tbl=""] - Table name
+ * @param {string} [options.select="*"] - Fields to select
+ * @param {string[]} [options.conditions=[]] - Query conditions
+ * @returns {Promise<Array<Object>>} Promise containing query results
  */
 export async function anyQuery({
   prj = "magnetic-runway-428121",
@@ -30,12 +14,12 @@ export async function anyQuery({
   tbl = "",
   select = "*",
   conditions = []
-}: QueryOptions = {}): Promise<QueryResponse> {
+} = {}) {
   try {
     // Base API configuration
     const baseUrl = "https://backend-v1-1010920399604.northamerica-northeast2.run.app";
     
-    let idToken: string;
+    let idToken;
     try {
       console.log("Attempting to get identity token...");
       
@@ -51,7 +35,7 @@ export async function anyQuery({
       
       idToken = await response.text();
       console.log("Token received successfully");
-    } catch (error: any) {
+    } catch (error) {
       console.error("MS Connection failed. Full error:", error);
       console.error("Error message:", error.message);
       if (error.cause) console.error("Parent error:", error.cause);
@@ -82,13 +66,13 @@ export async function anyQuery({
     // Parse the response
     if (apiResponse.ok) {
       const result = await apiResponse.json();
-      return result as QueryResponse;
+      return result;
     } else {
       const errorText = await apiResponse.text();
       console.error(`API request failed: ${errorText}`);
       throw new Error(`API request failed: ${apiResponse.status} ${apiResponse.statusText}`);
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Connection failed:", error.message);
     throw error;
   }
