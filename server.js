@@ -28,7 +28,7 @@ app.get('/api/polygons', async (req, res) => {
       [rows] = await connection.execute('SELECT * FROM catchments'); // Adjust query as needed
       connection.end();
     } else {
-      rows = await anyQuery({
+      [rows] = await anyQuery({
         tbl: 'catchments',
         select: '*'
       });
