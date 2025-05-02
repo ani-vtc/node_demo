@@ -67,8 +67,9 @@ const MapView = () => {
   
 
   // Function to dynamically style polygons based on Grade_Category and style configuration
-  const getPolygonStyle = (feature: any) => {
+  const getPolygonStyle = () => {
     
+
     return {
       color: styleConfig.strokeColor,
       weight: styleConfig.strokeWeight,
