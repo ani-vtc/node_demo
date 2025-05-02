@@ -8,10 +8,10 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 dotenv.config();
 import { anyQuery } from './queryFunctions.js';
-import Queries from './src/Queries/Queries.json' with { type: 'json' };
+//import Queries from './src/Queries/Queries.json' with { type: 'json' };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
+const Queries = JSON.parse(fs.readFileSync(path.join(__dirname, './src/Queries/Queries.json'), 'utf8'));
 const app = express();
 app.use(cors());
 
