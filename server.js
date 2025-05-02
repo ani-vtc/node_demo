@@ -5,7 +5,10 @@ import wellknown from 'wellknown';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import dotenv from 'dotenv';
+dotenv.config();
 import { anyQuery } from './queryFunctions.js';
+import Queries from './src/Queries/Queries.json' with { type: 'json' };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -23,7 +26,9 @@ const dbConfig = {
 app.get('/api/polygons', async (req, res) => {
   try {
     let rows;
-    if (process.env.ENV === 'dev') {
+
+    console.log(process.env.ENV);
+    if (process.env.ENV == "dev") {
       const connection = await mysql.createConnection(dbConfig);
       [rows] = await connection.execute('SELECT * FROM catchments'); // Adjust query as needed
       connection.end();
@@ -50,6 +55,39 @@ app.get('/api/polygons', async (req, res) => {
     res.status(500).send('Error fetching polygons');
   }
 });
+
+app.get('/api/polygons/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    let rows;
+    if (process.env.ENV == "dev") {
+      const connection = await mysql.createConnection(dbConfig);
+      [rows] = await connection.execute("Select * FROM " + Queries[`${id.toLowerCase()}_catchments_query`]);
+      connection.end();
+    } else {
+      [rows] = await anyQuery({
+        tbl: Queries[`${id.toLowerCase()}_catchments_query`],
+        select: '*',
+        
+      });
+    }
+    // Convert rows to GeoJSON format
+    const geoJson = {
+      type: 'FeatureCollection',
+      features: rows.map(row => ({
+        type: 'Feature',
+        geometry: wellknown.parse(row.Geometry_WKT), // Convert WKT to GeoJSON
+        properties: { ...row }, // Include other properties
+      })),
+    };
+    res.json(geoJson);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error fetching polygon');
+  }
+});
+
+
 
 // Check if dist directory exists before trying to serve static files
 const distPath = path.join(__dirname, 'dist');

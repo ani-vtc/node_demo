@@ -1,6 +1,8 @@
 import { MapContainer, TileLayer, GeoJSON, useMap} from 'react-leaflet';
 import { useEffect, useState } from 'react';
 import type { LatLngExpression } from 'leaflet';
+import StyleControlPanel, { StyleConfig } from './StyleControlPanel';
+import './StyleControlPanel.css';
 
 const position: LatLngExpression = [49.2827, -123.1207]; // Adjust to your desired center
 
@@ -28,13 +30,24 @@ function SetupMapPanes() {
 
 const MapView = () => {
   const [geoJsonData, setGeoJsonData] = useState(null);
+  
+  // Initialize style configuration with default values
+  const [styleConfig, setStyleConfig] = useState<StyleConfig>({
+    colorBy: 'Constant',
+    schoolType: 'Secondary',
+    schoolCategory: 'Public',
+    strokeColor: '#ff0000',
+    strokeWeight: 3,
+    fillColor: '#ff0000',
+    fillOpacity: 0,
+  });
 
   useEffect(() => {
     const fetchPolygons = async () => {
       try {
-        const response = await fetch('/api/polygons');
+        const response = await fetch(window.location.hostname === 'localhost' ? `http://localhost:5000/api/polygons/${styleConfig.schoolType}` : `/api/polygons/${styleConfig.schoolType}`);
         const data = await response.json();
-
+        console.log(data);
         // Log the column names from the first feature's properties
         if (data.features && data.features.length > 0) {
             console.log('Column names:', Object.keys(data.features[0].properties));
@@ -49,27 +62,19 @@ const MapView = () => {
     };
 
     fetchPolygons();
-  }, []);
+  }, [styleConfig.schoolType]);
 
-  // Function to dynamically style polygons based on Grade_Category
+  
+
+  // Function to dynamically style polygons based on Grade_Category and style configuration
   const getPolygonStyle = (feature: any) => {
-    const { Grade_Category, Level } = feature.properties;
-  
-    if (Grade_Category === 'Secondary') {
-      return { color: 'red', weight: 3, fillOpacity: 0, pane: 'secondaryPane' };
-    }
-  
-  
-    if (Grade_Category === 'Elementary') {
-      return { color: 'goldenrod', weight: 2, fillColor: 'yellow', fillOpacity: 0.7, pane: 'elementaryPane' };
-    }
-  
-    if (Level === 'District Level') {
-      return { color: 'black', weight: 5, fillOpacity: 0, pane: 'districtPane' };
-    }
-  
-    // Default style for other cases
-    return { color: 'gray', weight: 2, fillColor: 'lightgray', fillOpacity: 0.5, pane: 'defaultPane' };
+    
+    return {
+      color: styleConfig.strokeColor,
+      weight: styleConfig.strokeWeight,
+      fillColor: styleConfig.fillColor,
+      fillOpacity: styleConfig.fillOpacity,
+    };
   };
 
   const onEachFeature = (feature: any, layer: any) => {
@@ -91,20 +96,31 @@ const MapView = () => {
   };
 
   return (
-    <MapContainer
-      center={position}
-      zoom={13}
-      style={{ height: '100%', width: '100%' }}
-    >
-      <SetupMapPanes />
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; OpenStreetMap contributors'
-      />
-      {geoJsonData && (
-        <GeoJSON data={geoJsonData} style={getPolygonStyle} onEachFeature={onEachFeature} />
-      )}
-    </MapContainer>
+    <div className="map-container" style={{ display: 'flex', height: '100%' }}>
+      <div className="control-sidebar" style={{ width: '400px', overflow: 'auto' }}>
+        <StyleControlPanel 
+          styleConfig={styleConfig} 
+          onStyleChange={setStyleConfig} 
+          
+        />
+      </div>
+      <div className="map-wrapper" style={{ flex: 1 }}>
+        <MapContainer
+          center={position}
+          zoom={13}
+          style={{ height: '100%', width: '100%' }}
+        >
+          <SetupMapPanes />
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; OpenStreetMap contributors'
+          />
+          {geoJsonData && (
+            <GeoJSON data={geoJsonData} style={getPolygonStyle} onEachFeature={onEachFeature} />
+          )}
+        </MapContainer>
+      </div>
+    </div>
   );
 };
 

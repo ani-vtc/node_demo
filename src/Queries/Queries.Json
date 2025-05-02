@@ -1,0 +1,17 @@
+{
+
+    "school_points_query": "( SELECT i.*, f.Value AS FCI, u.Value AS Utilization, t.Value AS Numeracy10 FROM info i LEFT JOIN facilities f ON i.Code = f.Code AND f.Level = 'School Level' AND f.Year = '0000/0000' AND f.Metric = 'Facility Condition Index' AND f.Value_Type = 'Grade' LEFT JOIN facilities u ON i.Code = u.Code AND u.Level = 'School Level' AND u.Year = '2023/2024' AND u.Grades = 'Total' AND u.Metric = 'Utilization' AND u.Value_Type = 'Rate' LEFT JOIN tests t ON i.Code = t.Code AND t.Level = 'School Level' AND t.Year = '2022/2023' AND t.Grade = 10 AND t.Metric = 'Performance' AND t.Value_Type = 'Percentile Intrademographic' AND t.Official_Name = 'Graduation Assessments' AND t.Official_Subject = 'Numeracy' ) AS elementary_data"
+    ,
+
+    "school_points_query2": "( SELECT i.* FROM info i ) AS filtered_data"
+    ,
+
+    "elementary_catchments_query": "( SELECT c.*, f.Value AS FCI, u.Value AS Utilization FROM catchments c LEFT JOIN facilities f ON c.Code = f.Code AND f.Level = 'School Level' AND f.Year = '0000/0000' AND f.Metric = 'Facility Condition Index' AND f.Value_Type = 'Grade' LEFT JOIN facilities u ON c.Code = u.Code AND u.Level = 'School Level' AND u.Year = '2023/2024' AND u.Grades = 'Total' AND u.Metric = 'Utilization' AND u.Value_Type = 'Rate' WHERE c.Grade_Category = 'Elementary' ) AS elementary_data"
+    ,
+
+
+    "middle_catchments_query": "( SELECT c.*, f.Value AS FCI, u.Value AS Utilization FROM catchments c LEFT JOIN facilities f ON c.Code = f.Code AND f.Level = 'School Level' AND f.Year = '0000/0000' AND f.Metric = 'Facility Condition Index' AND f.Value_Type = 'Grade' LEFT JOIN facilities u ON c.Code = u.Code AND u.Level = 'School Level' AND u.Year = '2023/2024' AND u.Grades = 'Total' AND u.Metric = 'Utilization' AND u.Value_Type = 'Rate' WHERE c.Grade_Category = 'Middle' ) AS middle_data"
+    ,
+
+    "secondary_catchments_query": "( SELECT c.*, f.Value AS FCI, u.Value AS Utilization FROM catchments c LEFT JOIN facilities f ON c.Code = f.Code AND f.Level = 'School Level' AND f.Year = '0000/0000' AND f.Metric = 'Facility Condition Index' AND f.Value_Type = 'Grade' LEFT JOIN facilities u ON c.Code = u.Code AND u.Level = 'School Level' AND u.Year = '2023/2024' AND u.Grades = 'Total' AND u.Metric = 'Utilization' AND u.Value_Type = 'Rate' WHERE c.Grade_Category = 'Secondary' ) AS secondary_data"
+}                       

@@ -1,12 +1,13 @@
 import MapView from './components/MapView';
+import './App.css';
 
 function App() {
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header style={{ padding: '1rem', backgroundColor: '#1a1a1a', color: 'white', textAlign: 'center' }}>
-        <h3>Leaflet + Cloud SQL Polygons in TS React w VITE</h3>
+        <h3>School Catchment Areas Map</h3>
       </header>
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, overflow: 'hidden' }}>
         <MapView />
       </div>
     </div>
