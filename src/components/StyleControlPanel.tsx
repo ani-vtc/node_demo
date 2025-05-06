@@ -1,11 +1,12 @@
 import React from 'react';
-
+import { color, color_scale } from '../data_functions/data';
 // Define the style configuration interface
 export interface StyleConfig {
-  colorBy: string;
-  strokeColor: string;
+  strokeBy: string;
+  fillBy: string;
+  strokePallette: string;
+  fillPallette: string;
   strokeWeight: number;
-  fillColor: string;
   fillOpacity: number;
   schoolType: string; 
   schoolCategory: string;
@@ -14,9 +15,14 @@ export interface StyleConfig {
 interface StyleControlPanelProps {
   styleConfig: StyleConfig;
   onStyleChange: (styleConfig: StyleConfig) => void;
+  columnNames?: string[];
+  onColumnNamesChange: (columnNames: string[]) => void;
 }
 
-const StyleControlPanel: React.FC<StyleControlPanelProps> = ({ styleConfig, onStyleChange }) => {
+const StyleControlPanel: React.FC<StyleControlPanelProps> = ({styleConfig, 
+                                                              onStyleChange,
+                                                              columnNames = ['Constant', 'FCI', 'Utilization'],
+                                                              onColumnNamesChange }) => {
   // Helper function to handle style changes
   const handleSchoolTypeChange = (value: string) => {
     console.log(value);
@@ -33,21 +39,25 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({ styleConfig, onSt
     
   };
 
-  const handleColorByChange = (value: string) => {
-    onStyleChange({ ...styleConfig, colorBy: value });
+  const handleStrokeByChange = (value: string) => {
+    onStyleChange({ ...styleConfig, strokeBy: value });
   };
 
+  const handleFillByChange = (value: string) => {
+    onStyleChange({ ...styleConfig, fillBy: value });
+  };
+
+  const handleStrokePalletteChange = (value: string) => {
+    onStyleChange({ ...styleConfig, strokePallette: value });
+  };
+
+  const handleFillPalletteChange = (value: string) => {
+    onStyleChange({ ...styleConfig, fillPallette: value });
+  };
   return (
     <div className="style-control-panel">
       <h3>Map Style Controls</h3>
       <div className="Options">
-        <select id="color-by"
-            onChange={(e) => handleColorByChange(e.target.value)}
-        >
-            <option value="Constant">Constant</option>
-            <option value="FCI">FCI</option>
-            <option value="Utilization">Utilization</option>
-        </select>
         <select id="school-type"
             onChange={(e) => handleSchoolTypeChange(e.target.value)}
         >
@@ -68,12 +78,25 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({ styleConfig, onSt
         <h4>{styleConfig.schoolType + " " + styleConfig.schoolCategory}</h4>
         <div className="style-input-group">
           <label>
-            Stroke Color:
-            <input
-              type="color"
-              value={styleConfig.strokeColor}
-              onChange={(e) => handleStyleChange('strokeColor', e.target.value)}
-            />
+            Stroke Color By:
+            <select id="stroke-by"
+            onChange={(e) => handleStrokeByChange(e.target.value)}
+        >
+            {columnNames.map((columnName) => (
+                <option key={columnName} value={columnName}>{columnName}</option>
+            ))}
+        </select>
+          
+          </label>
+          <label>
+            Stroke Pallette:
+            <select id="stroke-pallette"
+            onChange={(e) => handleStyleChange('strokePallette', e.target.value)}
+            >
+              {Object.keys(color_scale).map((scale) => (
+                <option key={scale} value={scale}>{scale}</option>
+              ))}
+            </select>
           </label>
           <label>
             Stroke Weight:
@@ -87,12 +110,24 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({ styleConfig, onSt
             <span>{styleConfig.strokeWeight}px</span>
           </label>
           <label>
-            Fill Color:
-            <input
-              type="color"
-              value={styleConfig.fillColor}
-              onChange={(e) => handleStyleChange('fillColor', e.target.value)}
-            />
+            Fill Color By:
+            <select id="fill-by"
+            onChange={(e) => handleFillByChange(e.target.value)}
+            >
+                {columnNames.map((columnName) => (
+                    <option key={columnName} value={columnName}>{columnName}</option>
+                ))}
+            </select>
+          </label>
+          <label>
+            Fill Pallette:
+            <select id="fill-pallette"
+            onChange={(e) => handleStyleChange('fillPallette', e.target.value)}
+            >
+                {Object.keys(color_scale).map((scale) => (
+                    <option key={scale} value={scale}>{scale}</option>
+                ))}
+            </select>
           </label>
           <label>
             Fill Opacity:
