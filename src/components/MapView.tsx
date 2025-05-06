@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import type { LatLngExpression } from 'leaflet';
 import StyleControlPanel, { StyleConfig } from './StyleControlPanel';
 import './StyleControlPanel.css';
-import { color, color_scale } from '../data_functions/data';
+import { color_scale } from '../data_functions/data';
 import colorbrewer from 'colorbrewer';
-import { all } from 'axios';
+// import { all } from 'axios';
 const position: LatLngExpression = [49.2827, -123.1207]; // Adjust to your desired center
 
 // Create a component to setup panes when the map is ready
@@ -253,7 +253,6 @@ const MapView = () => {
           styleConfig={styleConfig} 
           onStyleChange={setStyleConfig} 
           columnNames={columnNames}
-          onColumnNamesChange={setColumnNames}
         />
       </div>
       <div className="map-wrapper" style={{ flex: 1 }}>

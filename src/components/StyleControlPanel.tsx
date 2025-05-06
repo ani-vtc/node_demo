@@ -1,5 +1,5 @@
 import React from 'react';
-import { color, color_scale } from '../data_functions/data';
+import { color_scale } from '../data_functions/data';
 // Define the style configuration interface
 export interface StyleConfig {
   strokeBy: string;
@@ -16,13 +16,11 @@ interface StyleControlPanelProps {
   styleConfig: StyleConfig;
   onStyleChange: (styleConfig: StyleConfig) => void;
   columnNames?: string[];
-  onColumnNamesChange: (columnNames: string[]) => void;
 }
 
 const StyleControlPanel: React.FC<StyleControlPanelProps> = ({styleConfig, 
                                                               onStyleChange,
-                                                              columnNames = ['Constant', 'FCI', 'Utilization'],
-                                                              onColumnNamesChange }) => {
+                                                              columnNames = ['Constant', 'FCI', 'Utilization']}) => {
   // Helper function to handle style changes
   const handleSchoolTypeChange = (value: string) => {
     console.log(value);
@@ -47,13 +45,6 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({styleConfig,
     onStyleChange({ ...styleConfig, fillBy: value });
   };
 
-  const handleStrokePalletteChange = (value: string) => {
-    onStyleChange({ ...styleConfig, strokePallette: value });
-  };
-
-  const handleFillPalletteChange = (value: string) => {
-    onStyleChange({ ...styleConfig, fillPallette: value });
-  };
   return (
     <div className="style-control-panel">
       <h3>Map Style Controls</h3>
