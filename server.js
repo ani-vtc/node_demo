@@ -26,8 +26,6 @@ const dbConfig = {
 app.get('/api/polygons', async (req, res) => {
   try {
     let rows;
-
-    console.log(process.env.ENV);
     if (process.env.ENV == "dev") {
       const connection = await mysql.createConnection(dbConfig);
       [rows] = await connection.execute('SELECT * FROM catchments'); // Adjust query as needed
@@ -38,7 +36,6 @@ app.get('/api/polygons', async (req, res) => {
         select: '*'
       });
     }
-    console.log(rows);
     // Convert rows to GeoJSON format
     const geoJson = {
       type: 'FeatureCollection',

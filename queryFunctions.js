@@ -52,7 +52,7 @@ export async function anyQuery({
       datasetId: ds,
       query: query
     };
-    
+     
     // Make the API request
     const apiResponse = await fetch(`${baseUrl}/query`, {
       method: 'POST',
@@ -70,7 +70,7 @@ export async function anyQuery({
     } else {
       const errorText = await apiResponse.text();
       console.error(`API request failed: ${errorText}`);
-      throw new Error(`API request failed: ${apiResponse.status} ${apiResponse.statusText}`);
+      throw new Error(`API request failed: ${apiResponse.status} ${apiResponse.statusText}. Query: ${query}` );
     }
   } catch (error) {
     console.error("Connection failed:", error.message);

@@ -9,6 +9,8 @@ import colorbrewer from 'colorbrewer';
 const position: LatLngExpression = [49.2827, -123.1207]; // Adjust to your desired center
 
 // Create a component to setup panes when the map is ready
+// @param none - No parameters
+// @returns: none
 function SetupMapPanes() {
   const map = useMap();
   
@@ -46,7 +48,13 @@ const MapView = () => {
     fillOpacity: 0,
   });
 
+  // Fetches the polygons from the server
+  // @param: none
+  // @returns: none
   useEffect(() => {
+    // Fetches the polygons from the server
+    // @param: none
+    // @returns: none
     const fetchPolygons = async () => {
       try {
         const response = await fetch(window.location.hostname === 'localhost' ? `http://localhost:5000/api/polygons/${styleConfig.schoolType}` : `/api/polygons/${styleConfig.schoolType}`);
@@ -96,6 +104,8 @@ const MapView = () => {
   
 
   // Function to dynamically style polygons based on Grade_Category and style configuration
+  // @param: {any} feature - The feature to style
+  // @returns: none
   const getPolygonStyle = (feature: any) => {
     const fillBy = styleConfig.fillBy;
     const strokeBy = styleConfig.strokeBy;
@@ -229,6 +239,9 @@ const MapView = () => {
     };
   };
 
+  // @param: {any} feature - The feature to style
+  // @param: {any} layer - The layer to style
+  // @returns: none
   const onEachFeature = (feature: any, layer: any) => {
     if (feature.properties && feature.properties.Level) {
       layer.on('mouseover', () => {
