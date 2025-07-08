@@ -14,6 +14,7 @@ const __dirname = path.dirname(__filename);
 const Queries = JSON.parse(fs.readFileSync(path.join(__dirname, './Queries/Queries.json'), 'utf8'));
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 //Db config for cloud run/local
 const dbConfig = {
@@ -272,6 +273,7 @@ class MCPClient {
   }
 }
 
+const mcpClient = new MCPClient();
 
 // Chat endpoint for LLM interactions
 app.post('/api/chat', async (req, res) => {
@@ -374,4 +376,11 @@ if (fs.existsSync(distPath)) {
 }
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`)
+  try {
+    await mcpClient.connectToServer('../sid-mcp/build/index.js');
+  } catch (error) {
+    console.error('Error connecting to MCP server:', error);
+  }
+});
