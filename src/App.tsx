@@ -1,5 +1,6 @@
 import MapView from './components/MapView';
 import './App.css';
+import Chatbot from './components/chatbot';
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <MapView />
       </div>
+      <Chatbot />
     </div>
   );
 }

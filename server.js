@@ -22,6 +22,275 @@ const dbConfig = {
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || 'schools',
 };
+class MCPClient {
+
+  constructor() {
+    this.anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    })
+    this.mcp = new Client({
+      name: "SID-Client",
+      version: "1.0.0",
+    });
+    
+    // Initialize Google Auth with default credentials
+    // This will automatically use:
+    // - Workload Identity when running on Cloud Run
+    // - Service account JSON when running locally (if GOOGLE_APPLICATION_CREDENTIALS is set)
+    this.googleAuth = new GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    });
+  }
+  async cleanup() {
+    if (this.transport) {
+      await this.mcp.close();
+    }
+  }
+  async connectToServer(serverScriptPath) {
+    try {
+      if (process.env.ENV == "dev") {
+        const isJs = serverScriptPath.endsWith(".js");
+        const isPy = serverScriptPath.endsWith(".py");
+        if (!isJs && !isPy) {
+          throw new Error("Server script must be a .js or .py file");
+        }
+        const command = isPy
+          ? process.platform === "win32"
+            ? "python"
+            : "python3"
+          : process.execPath;
+    
+        this.transport = new StdioClientTransport({
+          command,
+          args: [serverScriptPath],
+        });
+        this.mcp.connect(this.transport);
+    
+        const toolsResult = await this.mcp.listTools();
+        this.tools = toolsResult.tools.map((tool) => {
+          return {
+            name: tool.name,
+            description: tool.description,
+            input_schema: tool.inputSchema,
+          };
+        });
+        console.log(
+          "Connected to server with tools:",
+          this.tools.map(({ name }) => name)
+        );
+      } else {
+        const aud = 'https://sid-mcp-1010920399604.northamerica-northeast2.run.app';
+        const url = new URL('/mcp', aud);
+        
+        let token;
+        try {
+          // Method 1: Try using the metadata server (recommended for Cloud Run)
+          // This is the preferred method when running on Cloud Run
+          const metadataResponse = await fetch(
+            `http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=${encodeURIComponent(aud)}`,
+            {
+              headers: {
+                'Metadata-Flavor': 'Google'
+              }
+            }
+          );
+          
+          if (metadataResponse.ok) {
+            token = await metadataResponse.text();
+            console.log('Successfully obtained ID token from metadata server');
+          } else {
+            throw new Error(`Metadata server responded with status: ${metadataResponse.status}`);
+          }
+        } catch (metadataError) {
+          console.log('Metadata server not available, falling back to Google Auth library:', metadataError.message);
+          
+          // Method 2: Fallback to Google Auth library (for local development)
+          try {
+            const client = await this.googleAuth.getIdTokenClient(aud);
+            token = await client.fetchIdToken(aud);
+            console.log('Successfully obtained ID token from Google Auth library');
+          } catch (authError) {
+            console.error('Both metadata server and Google Auth library failed:', {
+              metadataError: metadataError.message,
+              authError: authError.message
+            });
+            throw new Error('Failed to obtain authentication token');
+          }
+        }
+
+        // Debug logging to identify the issue
+        console.log('Debug - URL object:', url);
+        console.log('Debug - URL href:', url.href);
+        console.log('Debug - URL href type:', typeof url.href);
+        console.log('Debug - Token type:', typeof token);
+        console.log('Debug - Token length:', token.length);
+
+        // Create a custom fetch function that includes authentication
+        const authenticatedFetch = async (input, init = {}) => {
+          const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            ...(init.headers || {})
+          };
+          
+          return fetch(input, {
+            ...init,
+            headers
+          });
+        };
+
+        // Store original fetch in case we need to override globally
+        const originalFetch = global.fetch;
+
+        // Try Method 1: Custom fetch function
+        try {
+          this.transport = new StreamableHTTPClientTransport(
+            url.href,
+            {
+              fetch: authenticatedFetch
+            }
+          );
+          console.log('Using custom fetch function for authentication');
+          await this.mcp.connect(this.transport);
+        } catch (fetchError) {
+          console.log('Custom fetch method failed, trying alternative approach:', fetchError.message);
+          
+          // Method 2: Try with requestInit option (alternative parameter structure)
+          try {
+            this.transport = new StreamableHTTPClientTransport(
+              url.href,
+              {
+                requestInit: {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  }
+                }
+              }
+            );
+            console.log('Using requestInit for authentication');
+            await this.mcp.connect(this.transport);
+          } catch (requestInitError) {
+            console.log('RequestInit method failed, trying basic constructor:', requestInitError.message);
+            
+             // Method 3: Basic constructor with global fetch override
+             console.log('Trying global fetch override method');
+             
+             // Temporarily override global fetch
+             global.fetch = authenticatedFetch;
+             
+             try {
+               this.transport = new StreamableHTTPClientTransport(url.href);
+               console.log('Using basic constructor with global fetch override');
+             } finally {
+               // Restore original fetch after transport creation
+               global.fetch = originalFetch;
+             }
+             await this.mcp.connect(this.transport);
+           }
+         }
+        
+
+        const toolsResult = await this.mcp.listTools();
+        this.tools = toolsResult.tools.map((tool) => {
+          return {
+            name: tool.name,
+            description: tool.description,
+            input_schema: tool.inputSchema,
+          };
+        });
+        console.log(
+          "Connected to MCP server with tools:",
+          this.tools.map(({ name }) => name)
+        );
+      }
+    } catch (e) {
+      console.log("Failed to connect to MCP server: ", e);
+      throw e;
+    }
+  }
+  async processQuery(query) {
+    const messages = query.map((msg) => {
+      return {
+        role: msg.isUser ? "user" : "assistant",
+        content: msg.text,
+      }
+    });
+    console.log("messages:", messages);
+  
+    const response = await this.anthropic.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 1000,
+      messages,
+      tools: this.tools,
+    });
+  
+    const finalText = [];
+    const toolResults = [];
+  
+    console.log("response.content:", response.content);
+
+   
+    for (const content of response.content) {
+      if (content.type === "text") {
+        finalText.push(content.text);
+      } else if (content.type === "tool_use") {
+        const toolName = content.name;
+        const toolArgs = content.input;
+  
+        const result = await this.mcp.callTool({
+          name: toolName,
+          arguments: toolArgs, 
+        });
+        //TODO add more flags
+        if (toolName === "changeDatabase") {
+          setCurrentDatabase(toolArgs.database);
+        }
+        toolResults.push(result);
+        finalText.push(
+          `[Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`
+        );
+  
+        messages.push({
+          role: "user",
+          content: result.content ,
+        });
+  
+        const response = await this.anthropic.messages.create({
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 1000,
+          messages,
+        });
+  
+        finalText.push(
+          response.content[0].type === "text" ? response.content[0].text : ""
+        );
+      }
+    }
+  
+    return {finalText: finalText.join("\n"), flags: flags};
+  }
+}
+
+
+// Chat endpoint for LLM interactions
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { messages} = req.body;
+    console.log('Received messages:', messages);
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'Invalid message format' });
+    }
+
+    const response = await mcpClient.processQuery(messages);
+    res.json({ response: response });
+  } catch (error) {
+    console.error('Error in chat endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 app.get('/api/polygons', async (req, res) => {
   try {
