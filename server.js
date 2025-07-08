@@ -29,6 +29,11 @@ const dbConfig = {
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || 'schools',
 };
+
+const flags = {
+  databaseChanged: {value: false, database: null}
+}
+
 class MCPClient {
 
   constructor() {
