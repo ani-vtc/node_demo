@@ -30,7 +30,7 @@ const dbConfig = {
   database: process.env.DB_NAME || 'schools',
 };
 
-const flags = {
+let flags = {
   databaseChanged: {value: false, database: null},
   strokeByChanged: {value: false, strokeBy: null},
   strokePalletteChanged: {value: false, strokePallette: null},
