@@ -31,7 +31,13 @@ const dbConfig = {
 };
 
 const flags = {
-  databaseChanged: {value: false, database: null}
+  databaseChanged: {value: false, database: null},
+  strokeByChanged: {value: false, strokeBy: null},
+  strokePalletteChanged: {value: false, strokePallette: null},
+  strokeWeightChanged: {value: false, strokeWeight: null},
+  fillByChanged: {value: false, fillBy: null},  
+  fillPalletteChanged: {value: false, fillPallette: null},
+  fillOpacityChanged: {value: false, fillOpacity: null}
 }
 
 class MCPClient {
@@ -258,6 +264,22 @@ class MCPClient {
         if (toolName === "changeDatabase") {
           setCurrentDatabase(toolArgs.database);
         }
+        if (toolName === "changeStroke") {
+          flags.strokeByChanged.value = true;
+          flags.strokeByChanged.strokeBy = toolArgs.strokeBy;
+          flags.strokePalletteChanged.value = true;
+          flags.strokePalletteChanged.strokePallette = toolArgs.strokePallette;
+          flags.strokeWeightChanged.value = true;
+          flags.strokeWeightChanged.strokeWeight = toolArgs.strokeWeight;
+        }
+        if (toolName === "changeFill") {
+          flags.fillByChanged.value = true;
+          flags.fillByChanged.fillBy = toolArgs.fillBy;
+          flags.fillPalletteChanged.value = true;
+          flags.fillPalletteChanged.fillPallette = toolArgs.fillPallette;
+          flags.fillOpacityChanged.value = true;
+          flags.fillOpacityChanged.fillOpacity = toolArgs.fillOpacity;
+        }
         toolResults.push(result);
         finalText.push(
           `[Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`
@@ -297,6 +319,7 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const response = await mcpClient.processQuery(messages);
+    resetFlags();
     res.json({ response: response });
   } catch (error) {
     console.error('Error in chat endpoint:', error);
@@ -366,7 +389,17 @@ app.get('/api/polygons/:id', async (req, res) => {
   }
 });
 
-
+function resetFlags() {
+  flags = {
+    databaseChanged: {value: false, database: null},
+    strokeByChanged: {value: false, strokeBy: null},
+    strokePalletteChanged: {value: false, strokePallette: null},
+    strokeWeightChanged: {value: false, strokeWeight: null},
+    fillByChanged: {value: false, fillBy: null},  
+    fillPalletteChanged: {value: false, fillPallette: null},
+    fillOpacityChanged: {value: false, fillOpacity: null}
+  }
+}
 
 // Check if dist directory exists before trying to serve static files
 const distPath = path.join(__dirname, 'dist');

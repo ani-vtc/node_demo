@@ -9,6 +9,12 @@ interface Message {
 declare global {
   interface Window {
     handleDatabaseChange?: (database: string) => boolean;
+    handleStrokeByChange?: (strokeBy: string) => boolean;
+    handleStrokePalletteChange?: (strokePallette: string) => boolean;
+    handleStrokeWeightChange?: (strokeWeight: number) => boolean;
+    handleFillByChange?: (fillBy: string) => boolean;
+    handleFillPalletteChange?: (fillPallette: string) => boolean;
+    handleFillOpacityChange?: (fillOpacity: number) => boolean;
   }
 }
 
@@ -42,8 +48,26 @@ const Chatbot: React.FC = () => {
       const data = await response.json();
       const flags = data.response.flags;
       console.log('chatbot tsx data: ', data);
-      if (flags.databaseChanged.value) {
-        window.handleDatabaseChange?.(flags.databaseChanged.database);
+      // if (flags.databaseChanged.value) {
+      //   window.handleDatabaseChange?.(flags.databaseChanged.database);
+      // }
+      if (flags.strokeByChanged.value) {
+        window.handleStrokeByChange?.(flags.strokeByChanged.strokeBy);
+      }
+      if (flags.strokePalletteChanged.value) {
+        window.handleStrokePalletteChange?.(flags.strokePalletteChanged.strokePallette);
+      }
+      if (flags.strokeWeightChanged.value) {
+        window.handleStrokeWeightChange?.(flags.strokeWeightChanged.strokeWeight);
+      }
+      if (flags.fillByChanged.value) {
+        window.handleFillByChange?.(flags.fillByChanged.fillBy);
+      }
+      if (flags.fillPalletteChanged.value) {
+        window.handleFillPalletteChange?.(flags.fillPalletteChanged.fillPallette);
+      }
+      if (flags.fillOpacityChanged.value) {
+        window.handleFillOpacityChange?.(flags.fillOpacityChanged.fillOpacity);
       }
       console.log('Response:', data.response);
       
