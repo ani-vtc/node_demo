@@ -48,6 +48,70 @@ const MapView = () => {
     fillOpacity: 0,
   });
 
+  // Set up window functions for chatbot integration
+  useEffect(() => {
+    // Define window functions that the chatbot can call to update style
+    window.handleStrokeByChange = (strokeBy: string) => {
+      console.log('Updating strokeBy to:', strokeBy);
+      setStyleConfig(prev => ({ ...prev, strokeBy }));
+      return true;
+    };
+
+    window.handleStrokePalletteChange = (strokePallette: string) => {
+      console.log('Updating strokePallette to:', strokePallette);
+      setStyleConfig(prev => ({ ...prev, strokePallette }));
+      return true;
+    };
+
+    window.handleStrokeWeightChange = (strokeWeight: number) => {
+      console.log('Updating strokeWeight to:', strokeWeight);
+      setStyleConfig(prev => ({ ...prev, strokeWeight }));
+      return true;
+    };
+
+    window.handleFillByChange = (fillBy: string) => {
+      console.log('Updating fillBy to:', fillBy);
+      setStyleConfig(prev => ({ ...prev, fillBy }));
+      return true;
+    };
+
+    window.handleFillPalletteChange = (fillPallette: string) => {
+      console.log('Updating fillPallette to:', fillPallette);
+      setStyleConfig(prev => ({ ...prev, fillPallette }));
+      return true;
+    };
+
+    window.handleFillOpacityChange = (fillOpacity: number) => {
+      console.log('Updating fillOpacity to:', fillOpacity);
+      setStyleConfig(prev => ({ ...prev, fillOpacity }));
+      return true;
+    };
+
+    window.handleSchoolTypeChange = (schoolType: string) => {
+      console.log('Updating schoolType to:', schoolType);
+      setStyleConfig(prev => ({ ...prev, schoolType }));
+      return true;
+    };
+
+    window.handleSchoolCategoryChange = (schoolCategory: string) => {
+      console.log('Updating schoolCategory to:', schoolCategory);
+      setStyleConfig(prev => ({ ...prev, schoolCategory }));
+      return true;
+    };
+
+    // Cleanup function to remove window functions when component unmounts
+    return () => {
+      delete window.handleStrokeByChange;
+      delete window.handleStrokePalletteChange;
+      delete window.handleStrokeWeightChange;
+      delete window.handleFillByChange;
+      delete window.handleFillPalletteChange;
+      delete window.handleFillOpacityChange;
+      delete window.handleSchoolTypeChange;
+      delete window.handleSchoolCategoryChange;
+    };
+  }, []);
+
   // Fetches the polygons from the server
   // @param: none
   // @returns: none

@@ -45,11 +45,13 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({styleConfig,
     onStyleChange({ ...styleConfig, fillBy: value });
   };
 
+
   return (
     <div className="style-control-panel">
       <h3>Map Style Controls</h3>
       <div className="Options">
         <select id="school-type"
+            value={styleConfig.schoolType}
             onChange={(e) => handleSchoolTypeChange(e.target.value)}
         >
           <option value="Secondary">Secondary Schools</option>
@@ -58,6 +60,7 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({styleConfig,
           {/* <option value="Default">Default Style</option> */}
         </select>
         <select id="school-category"
+            value={styleConfig.schoolCategory}
             onChange={(e) => handleSchoolCategoryChange(e.target.value)}
         >
             <option value="Public">Public</option>
@@ -71,6 +74,7 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({styleConfig,
           <label>
             Stroke Color By:
             <select id="stroke-by"
+            value={styleConfig.strokeBy}
             onChange={(e) => handleStrokeByChange(e.target.value)}
         >
             {columnNames.map((columnName) => (
@@ -82,6 +86,7 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({styleConfig,
           <label>
             Stroke Pallette:
             <select id="stroke-pallette"
+            value={styleConfig.strokePallette}
             onChange={(e) => handleStyleChange('strokePallette', e.target.value)}
             >
               {Object.keys(color_scale).map((scale) => (
@@ -103,6 +108,7 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({styleConfig,
           <label>
             Fill Color By:
             <select id="fill-by"
+            value={styleConfig.fillBy}
             onChange={(e) => handleFillByChange(e.target.value)}
             >
                 {columnNames.map((columnName) => (
@@ -113,6 +119,7 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({styleConfig,
           <label>
             Fill Pallette:
             <select id="fill-pallette"
+            value={styleConfig.fillPallette}
             onChange={(e) => handleStyleChange('fillPallette', e.target.value)}
             >
                 {Object.keys(color_scale).map((scale) => (

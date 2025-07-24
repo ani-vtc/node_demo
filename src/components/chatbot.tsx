@@ -9,12 +9,15 @@ interface Message {
 declare global {
   interface Window {
     handleDatabaseChange?: (database: string) => boolean;
+    handleStyleChange?: (strokeData: string, strokeColor: string, strokeWeight: number) => boolean;
     handleStrokeByChange?: (strokeBy: string) => boolean;
     handleStrokePalletteChange?: (strokePallette: string) => boolean;
     handleStrokeWeightChange?: (strokeWeight: number) => boolean;
     handleFillByChange?: (fillBy: string) => boolean;
     handleFillPalletteChange?: (fillPallette: string) => boolean;
     handleFillOpacityChange?: (fillOpacity: number) => boolean;
+    handleSchoolTypeChange?: (schoolType: string) => boolean;
+    handleSchoolCategoryChange?: (schoolCategory: string) => boolean;
   }
 }
 
@@ -68,6 +71,12 @@ const Chatbot: React.FC = () => {
       }
       if (flags.fillOpacityChanged.value) {
         window.handleFillOpacityChange?.(flags.fillOpacityChanged.fillOpacity);
+      }
+      if (flags.schoolTypeChanged && flags.schoolTypeChanged.value) {
+        window.handleSchoolTypeChange?.(flags.schoolTypeChanged.schoolType);
+      }
+      if (flags.schoolCategoryChanged && flags.schoolCategoryChanged.value) {
+        window.handleSchoolCategoryChange?.(flags.schoolCategoryChanged.schoolCategory);
       }
       console.log('Response:', data.response);
       
