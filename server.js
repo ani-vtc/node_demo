@@ -266,9 +266,9 @@ class MCPClient {
         }
         if (toolName === "changeStroke") {
           flags.strokeByChanged.value = true;
-          flags.strokeByChanged.strokeBy = toolArgs.strokeBy;
+          flags.strokeByChanged.strokeBy = toolArgs.strokeData;
           flags.strokePalletteChanged.value = true;
-          flags.strokePalletteChanged.strokePallette = toolArgs.strokePallette;
+          flags.strokePalletteChanged.strokePallette = toolArgs.strokeColor;
           flags.strokeWeightChanged.value = true;
           flags.strokeWeightChanged.strokeWeight = toolArgs.strokeWeight;
         }
