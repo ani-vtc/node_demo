@@ -6,7 +6,7 @@ import './StyleControlPanel.css';
 import { color_scale } from '../data_functions/data';
 import colorbrewer from 'colorbrewer';
 // import { all } from 'axios';
-const position: LatLngExpression = [49.2827, -123.1207]; // Adjust to your desired center
+const defaultPosition: LatLngExpression = [49.2827, -123.1207]; // Default center
 
 // Create a component to setup panes when the map is ready
 // @param none - No parameters
@@ -32,9 +32,25 @@ function SetupMapPanes() {
   return null;
 }
 
+// Component to handle map center updates
+// @param {LatLngExpression} center - The new center coordinates
+// @returns: null
+function MapCenterUpdater({ center }: { center: LatLngExpression }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (center) {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, map]);
+  
+  return null;
+}
+
 const MapView = () => {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [columnNames, setColumnNames] = useState<string[]>([]);
+  const [mapCenter, setMapCenter] = useState<LatLngExpression>(defaultPosition);
   
   // Initialize style configuration with default values
   const [styleConfig, setStyleConfig] = useState<StyleConfig>({
@@ -99,6 +115,12 @@ const MapView = () => {
       return true;
     };
 
+    window.handleLatLngChange = (lat: number, lng: number) => {
+      console.log('Updating map center to:', lat, lng);
+      setMapCenter([lat, lng]);
+      return true;
+    };
+
     // Cleanup function to remove window functions when component unmounts
     return () => {
       delete window.handleStrokeByChange;
@@ -109,6 +131,7 @@ const MapView = () => {
       delete window.handleFillOpacityChange;
       delete window.handleSchoolTypeChange;
       delete window.handleSchoolCategoryChange;
+      delete window.handleLatLngChange;
     };
   }, []);
 
@@ -334,7 +357,7 @@ const MapView = () => {
       </div>
       <div className="map-wrapper" style={{ flex: 1 }}>
         <MapContainer
-          center={position}
+          center={defaultPosition}
           zoom={13}
           style={{ height: '100%', width: '100%' }}
         >
@@ -343,6 +366,7 @@ const MapView = () => {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; OpenStreetMap contributors'
           />
+          <MapCenterUpdater center={mapCenter} />
           {geoJsonData && (
             <GeoJSON data={geoJsonData} style={getPolygonStyle} onEachFeature={onEachFeature} />
           )}

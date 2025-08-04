@@ -18,6 +18,7 @@ declare global {
     handleFillOpacityChange?: (fillOpacity: number) => boolean;
     handleSchoolTypeChange?: (schoolType: string) => boolean;
     handleSchoolCategoryChange?: (schoolCategory: string) => boolean;
+    handleLatLngChange?: (lat: number, lng: number) => boolean;
   }
 }
 
@@ -77,6 +78,9 @@ const Chatbot: React.FC = () => {
       }
       if (flags.schoolCategoryChanged && flags.schoolCategoryChanged.value) {
         window.handleSchoolCategoryChange?.(flags.schoolCategoryChanged.schoolCategory);
+      }
+      if (flags.latLngChanged.value) {
+        window.handleLatLngChange?.(flags.latLngChanged.lat, flags.latLngChanged.lng);
       }
       console.log('Response:', data.response);
       

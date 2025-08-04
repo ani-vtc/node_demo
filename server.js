@@ -37,7 +37,8 @@ let flags = {
   strokeWeightChanged: {value: false, strokeWeight: null},
   fillByChanged: {value: false, fillBy: null},  
   fillPalletteChanged: {value: false, fillPallette: null},
-  fillOpacityChanged: {value: false, fillOpacity: null}
+  fillOpacityChanged: {value: false, fillOpacity: null},
+  latLngChanged: {value: false, lat: null, lng: null}
 }
 
 class MCPClient {
@@ -264,21 +265,39 @@ class MCPClient {
         if (toolName === "changeDatabase") {
           setCurrentDatabase(toolArgs.database);
         }
-        if (toolName === "changeStroke") {
-          flags.strokeByChanged.value = true;
-          flags.strokeByChanged.strokeBy = toolArgs.strokeData;
-          flags.strokePalletteChanged.value = true;
-          flags.strokePalletteChanged.strokePallette = toolArgs.strokeColor;
-          flags.strokeWeightChanged.value = true;
-          flags.strokeWeightChanged.strokeWeight = toolArgs.strokeWeight;
+        if (toolName === "setStroke") {
+          if (toolArgs.colorFlag) {
+            flags.strokePalletteChanged.value = true;
+            flags.strokePalletteChanged.strokePallette = toolArgs.strokeColor;
+          }
+          if (toolArgs.weightFlag) {
+            flags.strokeWeightChanged.value = true;
+            flags.strokeWeightChanged.strokeWeight = toolArgs.strokeWeight;
+          }
+          if (toolArgs.dataFlag) {
+            flags.strokeByChanged.value = true;
+            flags.strokeByChanged.strokeBy = toolArgs.strokeData;
+          }
         }
-        if (toolName === "changeFill") {
-          flags.fillByChanged.value = true;
-          flags.fillByChanged.fillBy = toolArgs.fillBy;
-          flags.fillPalletteChanged.value = true;
-          flags.fillPalletteChanged.fillPallette = toolArgs.fillPallette;
-          flags.fillOpacityChanged.value = true;
-          flags.fillOpacityChanged.fillOpacity = toolArgs.fillOpacity;
+        if (toolName === "setFill") {
+          if (toolArgs.colorFlag) {
+            flags.fillByChanged.value = true;
+            flags.fillByChanged.fillBy = toolArgs.fillBy;
+          }
+          if (toolArgs.colorFlag) {
+            flags.fillPalletteChanged.value = true;
+            flags.fillPalletteChanged.fillPallette = toolArgs.fillPallette;
+          }
+          if (toolArgs.opacityFlag) {
+            flags.fillOpacityChanged.value = true;
+            flags.fillOpacityChanged.fillOpacity = toolArgs.fillOpacity;
+          }
+        }
+
+        if (toolName === "setLatLng") {
+          flags.latLngChanged.value = true;
+          flags.latLngChanged.lat = toolArgs.lat;
+          flags.latLngChanged.lng = toolArgs.lng;
         }
         toolResults.push(result);
         finalText.push(
