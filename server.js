@@ -262,9 +262,6 @@ class MCPClient {
           arguments: toolArgs, 
         });
         //TODO add more flags
-        if (toolName === "changeDatabase") {
-          setCurrentDatabase(toolArgs.database);
-        }
         if (toolName === "setStroke") {
           if (toolArgs.colorFlag) {
             flags.strokePalletteChanged.value = true;
@@ -416,7 +413,8 @@ function resetFlags() {
     strokeWeightChanged: {value: false, strokeWeight: null},
     fillByChanged: {value: false, fillBy: null},  
     fillPalletteChanged: {value: false, fillPallette: null},
-    fillOpacityChanged: {value: false, fillOpacity: null}
+    fillOpacityChanged: {value: false, fillOpacity: null},
+    latLngChanged: {value: false, lat: null, lng: null}
   }
 }
 
