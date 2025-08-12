@@ -21,6 +21,7 @@ const Queries = JSON.parse(fs.readFileSync(path.join(__dirname, './Queries/Queri
 const app = express();
 app.use(cors());
 app.use(express.json());
+//test
 
 //Db config for cloud run/local
 const dbConfig = {
