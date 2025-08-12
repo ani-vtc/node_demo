@@ -51,6 +51,34 @@ const MapView = () => {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [columnNames, setColumnNames] = useState<string[]>([]);
   const [mapCenter, setMapCenter] = useState<LatLngExpression>(defaultPosition);
+
+  // Function to get tile layer configuration based on map type
+  const getTileLayerConfig = (mapType: string) => {
+    const mapTypes = {
+      street: {
+        url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        attribution: '&copy; OpenStreetMap contributors'
+      },
+      satellite: {
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attribution: '&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+      },
+      topographic: {
+        url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        attribution: '&copy; OpenTopoMap contributors'
+      },
+      terrain: {
+        url: "https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.png",
+        attribution: '&copy; Stamen Design &copy; OpenStreetMap contributors'
+      },
+      hybrid: {
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attribution: '&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+      }
+    };
+    
+    return mapTypes[mapType as keyof typeof mapTypes] || mapTypes.street;
+  };
   
   // Initialize style configuration with default values
   const [styleConfig, setStyleConfig] = useState<StyleConfig>({
@@ -62,6 +90,7 @@ const MapView = () => {
     fillPallette: 'Warm',
     strokeWeight: 3,
     fillOpacity: 0,
+    mapType: 'street',
   });
 
   // Set up window functions for chatbot integration
@@ -121,6 +150,12 @@ const MapView = () => {
       return true;
     };
 
+    window.handleMapTypeChange = (mapType: string) => {
+      console.log('Updating map type to:', mapType);
+      setStyleConfig(prev => ({ ...prev, mapType }));
+      return true;
+    };
+
     // Cleanup function to remove window functions when component unmounts
     return () => {
       delete window.handleStrokeByChange;
@@ -132,6 +167,7 @@ const MapView = () => {
       delete window.handleSchoolTypeChange;
       delete window.handleSchoolCategoryChange;
       delete window.handleLatLngChange;
+      delete window.handleMapTypeChange;
     };
   }, []);
 
@@ -363,8 +399,9 @@ const MapView = () => {
         >
           <SetupMapPanes />
           <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; OpenStreetMap contributors'
+            key={styleConfig.mapType}
+            url={getTileLayerConfig(styleConfig.mapType).url}
+            attribution={getTileLayerConfig(styleConfig.mapType).attribution}
           />
           <MapCenterUpdater center={mapCenter} />
           {geoJsonData && (

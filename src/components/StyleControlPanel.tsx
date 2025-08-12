@@ -10,6 +10,7 @@ export interface StyleConfig {
   fillOpacity: number;
   schoolType: string; 
   schoolCategory: string;
+  mapType: string;
 }
 
 interface StyleControlPanelProps {
@@ -45,6 +46,10 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({styleConfig,
     onStyleChange({ ...styleConfig, fillBy: value });
   };
 
+  const handleMapTypeChange = (value: string) => {
+    onStyleChange({ ...styleConfig, mapType: value });
+  };
+
 
   return (
     <div className="style-control-panel">
@@ -66,6 +71,16 @@ const StyleControlPanel: React.FC<StyleControlPanelProps> = ({styleConfig,
             <option value="Public">Public</option>
             <option value="Francophone">Francophone</option>
             <option value="Private">Private</option>
+        </select>
+        <select id="map-type"
+            value={styleConfig.mapType}
+            onChange={(e) => handleMapTypeChange(e.target.value)}
+        >
+            <option value="street">Street Map</option>
+            <option value="satellite">Satellite</option>
+            <option value="topographic">Topographic</option>
+            <option value="terrain">Terrain</option>
+            <option value="hybrid">Hybrid</option>
         </select>
       </div>
       <div className="style-section">

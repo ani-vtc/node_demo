@@ -19,6 +19,7 @@ declare global {
     handleSchoolTypeChange?: (schoolType: string) => boolean;
     handleSchoolCategoryChange?: (schoolCategory: string) => boolean;
     handleLatLngChange?: (lat: number, lng: number) => boolean;
+    handleMapTypeChange?: (mapType: string) => boolean;
   }
 }
 
@@ -81,6 +82,9 @@ const Chatbot: React.FC = () => {
       }
       if (flags.latLngChanged.value) {
         window.handleLatLngChange?.(flags.latLngChanged.lat, flags.latLngChanged.lng);
+      }
+      if (flags.mapTypeChanged && flags.mapTypeChanged.value) {
+        window.handleMapTypeChange?.(flags.mapTypeChanged.mapType);
       }
       console.log('Response:', data.response);
       

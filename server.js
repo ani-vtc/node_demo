@@ -38,7 +38,8 @@ let flags = {
   fillByChanged: {value: false, fillBy: null},  
   fillPalletteChanged: {value: false, fillPallette: null},
   fillOpacityChanged: {value: false, fillOpacity: null},
-  latLngChanged: {value: false, lat: null, lng: null}
+  latLngChanged: {value: false, lat: null, lng: null},
+  mapTypeChanged: {value: false, mapType: null}
 }
 
 class MCPClient {
@@ -297,6 +298,10 @@ class MCPClient {
           flags.latLngChanged.lat = toolArgs.lat;
           flags.latLngChanged.lng = toolArgs.lng;
         }
+        if (toolName === "setMapType") {
+          flags.mapTypeChanged.value = true;
+          flags.mapTypeChanged.mapType = toolArgs.mapType;
+        }
         toolResults.push(result);
         finalText.push(
           `[Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`
@@ -415,7 +420,8 @@ function resetFlags() {
     fillByChanged: {value: false, fillBy: null},  
     fillPalletteChanged: {value: false, fillPallette: null},
     fillOpacityChanged: {value: false, fillOpacity: null},
-    latLngChanged: {value: false, lat: null, lng: null}
+    latLngChanged: {value: false, lat: null, lng: null},
+    mapTypeChanged: {value: false, mapType: null}
   }
 }
 
