@@ -8,7 +8,11 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import { GoogleAuth } from 'google-auth-library';
 import { URL } from 'url';
-import { Anthropic } from '@anthropic-ai/sdk';
+import { ChatAnthropic } from '@langchain/anthropic';
+import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
+import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { z } from 'zod';
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -42,16 +46,23 @@ let flags = {
   latLngChanged: {value: false, lat: null, lng: null}
 }
 
-class MCPClient {
+class LangChainMCPClient {
 
   constructor() {
-    this.anthropic = new Anthropic({
+    this.llm = new ChatAnthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
-    })
+      model: "claude-3-5-sonnet-20241022",
+      temperature: 0,
+    });
+    
     this.mcp = new Client({
       name: "SID-Client",
       version: "1.0.0",
     });
+    
+    this.tools = [];
+    this.agent = null;
+    this.agentExecutor = null;
     
     // Initialize Google Auth with default credentials
     // This will automatically use:
@@ -65,6 +76,118 @@ class MCPClient {
     if (this.transport) {
       await this.mcp.close();
     }
+  }
+
+  async createLangChainTools(mcpTools) {
+    const tools = [];
+    
+    for (const tool of mcpTools) {
+      const langchainTool = new DynamicStructuredTool({
+        name: tool.name,
+        description: tool.description,
+        schema: this.convertSchemaToZod(tool.inputSchema),
+        func: async (input) => {
+          try {
+            const result = await this.mcp.callTool({
+              name: tool.name,
+              arguments: input,
+            });
+            
+            // Handle flag updates for specific tools
+            this.handleToolFlags(tool.name, input);
+            
+            return JSON.stringify(result.content);
+          } catch (error) {
+            return `Error calling tool ${tool.name}: ${error.message}`;
+          }
+        },
+      });
+      tools.push(langchainTool);
+    }
+    
+    return tools;
+  }
+
+  convertSchemaToZod(inputSchema) {
+    // Convert JSON Schema to Zod schema
+    // This is a simplified converter - you may need to expand this for complex schemas
+    const properties = inputSchema.properties || {};
+    const zodObj = {};
+    
+    for (const [key, prop] of Object.entries(properties)) {
+      if (prop.type === 'string') {
+        zodObj[key] = z.string().optional();
+      } else if (prop.type === 'number') {
+        zodObj[key] = z.number().optional();
+      } else if (prop.type === 'boolean') {
+        zodObj[key] = z.boolean().optional();
+      } else if (prop.type === 'array') {
+        zodObj[key] = z.array(z.any()).optional();
+      } else {
+        zodObj[key] = z.any().optional();
+      }
+    }
+    
+    return z.object(zodObj);
+  }
+
+  handleToolFlags(toolName, toolArgs) {
+    // Handle flag updates for specific tools (same logic as before)
+    if (toolName === "setStroke") {
+      if (toolArgs.colorFlag) {
+        flags.strokePalletteChanged.value = true;
+        flags.strokePalletteChanged.strokePallette = toolArgs.strokeColor;
+      }
+      if (toolArgs.weightFlag) {
+        flags.strokeWeightChanged.value = true;
+        flags.strokeWeightChanged.strokeWeight = toolArgs.strokeWeight;
+      }
+      if (toolArgs.dataFlag) {
+        flags.strokeByChanged.value = true;
+        flags.strokeByChanged.strokeBy = toolArgs.strokeData;
+      }
+    }
+    if (toolName === "setFill") {
+      if (toolArgs.colorFlag) {
+        flags.fillByChanged.value = true;
+        flags.fillByChanged.fillBy = toolArgs.fillBy;
+      }
+      if (toolArgs.colorFlag) {
+        flags.fillPalletteChanged.value = true;
+        flags.fillPalletteChanged.fillPallette = toolArgs.fillPallette;
+      }
+      if (toolArgs.opacityFlag) {
+        flags.fillOpacityChanged.value = true;
+        flags.fillOpacityChanged.fillOpacity = toolArgs.fillOpacity;
+      }
+    }
+    if (toolName === "setLatLng") {
+      flags.latLngChanged.value = true;
+      flags.latLngChanged.lat = toolArgs.lat;
+      flags.latLngChanged.lng = toolArgs.lng;
+    }
+  }
+
+  async setupAgent() {
+    const prompt = ChatPromptTemplate.fromMessages([
+      ["system", "You are a helpful assistant that can call tools to help with map visualization tasks."],
+      new MessagesPlaceholder("chat_history"),
+      ["human", "{input}"],
+      new MessagesPlaceholder("agent_scratchpad"),
+    ]);
+
+    this.agent = await createToolCallingAgent({
+      llm: this.llm,
+      tools: this.tools,
+      prompt,
+    });
+
+    this.agentExecutor = new AgentExecutor({
+      agent: this.agent,
+      tools: this.tools,
+      verbose: true,
+      maxIterations: 3,
+    });
   }
   async connectToServer(serverScriptPath) {
     try {
@@ -87,16 +210,11 @@ class MCPClient {
         this.mcp.connect(this.transport);
     
         const toolsResult = await this.mcp.listTools();
-        this.tools = toolsResult.tools.map((tool) => {
-          return {
-            name: tool.name,
-            description: tool.description,
-            input_schema: tool.inputSchema,
-          };
-        });
+        this.tools = await this.createLangChainTools(toolsResult.tools);
+        await this.setupAgent();
         console.log(
           "Connected to server with tools:",
-          this.tools.map(({ name }) => name)
+          this.tools.map((tool) => tool.name)
         );
       } else {
         const aud = 'https://sid-mcp-1010920399604.northamerica-northeast2.run.app';
@@ -212,17 +330,12 @@ class MCPClient {
         
 
         const toolsResult = await this.mcp.listTools();
-        this.tools = toolsResult.tools.map((tool) => {
-          return {
-            name: tool.name,
-            description: tool.description,
-            input_schema: tool.inputSchema,
-          };
-        });
-        this.tools = this.tools.filter((tool) => tool.name !== "changeDatabase");
+        const filteredTools = toolsResult.tools.filter((tool) => tool.name !== "changeDatabase");
+        this.tools = await this.createLangChainTools(filteredTools);
+        await this.setupAgent();
         console.log(
           "Connected to MCP server with tools:",
-          this.tools.map(({ name }) => name)
+          this.tools.map((tool) => tool.name)
         );
       }
     } catch (e) {
@@ -231,100 +344,52 @@ class MCPClient {
     }
   }
   async processQuery(query) {
-    const messages = query.map((msg) => {
+    try {
+      // Convert message format for LangChain
+      const chatHistory = [];
+      let currentInput = "";
+      
+      for (let i = 0; i < query.length; i++) {
+        const msg = query[i];
+        if (msg.isUser) {
+          if (i === query.length - 1) {
+            // Last message is the current input
+            currentInput = msg.text;
+          } else {
+            // Previous user messages go to chat history
+            chatHistory.push(["human", msg.text]);
+          }
+        } else {
+          // Assistant messages go to chat history
+          chatHistory.push(["assistant", msg.text]);
+        }
+      }
+      
+      console.log("Processing query with LangChain:", currentInput);
+      console.log("Chat history:", chatHistory);
+      
+      const result = await this.agentExecutor.invoke({
+        input: currentInput,
+        chat_history: chatHistory,
+      });
+      
+      console.log("LangChain result:", result);
+      
       return {
-        role: msg.isUser ? "user" : "assistant",
-        content: msg.text,
-      }
-    });
-    console.log("messages:", messages);
-  
-    const response = await this.anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1000,
-      messages,
-      tools: this.tools,
-    });
-  
-    const finalText = [];
-    const toolResults = [];
-  
-    console.log("response.content:", response.content);
-
-   
-    for (const content of response.content) {
-      if (content.type === "text") {
-        finalText.push(content.text);
-      } else if (content.type === "tool_use") {
-        const toolName = content.name;
-        const toolArgs = content.input;
-  
-        const result = await this.mcp.callTool({
-          name: toolName,
-          arguments: toolArgs, 
-        });
-        //TODO add more flags
-        if (toolName === "setStroke") {
-          if (toolArgs.colorFlag) {
-            flags.strokePalletteChanged.value = true;
-            flags.strokePalletteChanged.strokePallette = toolArgs.strokeColor;
-          }
-          if (toolArgs.weightFlag) {
-            flags.strokeWeightChanged.value = true;
-            flags.strokeWeightChanged.strokeWeight = toolArgs.strokeWeight;
-          }
-          if (toolArgs.dataFlag) {
-            flags.strokeByChanged.value = true;
-            flags.strokeByChanged.strokeBy = toolArgs.strokeData;
-          }
-        }
-        if (toolName === "setFill") {
-          if (toolArgs.colorFlag) {
-            flags.fillByChanged.value = true;
-            flags.fillByChanged.fillBy = toolArgs.fillBy;
-          }
-          if (toolArgs.colorFlag) {
-            flags.fillPalletteChanged.value = true;
-            flags.fillPalletteChanged.fillPallette = toolArgs.fillPallette;
-          }
-          if (toolArgs.opacityFlag) {
-            flags.fillOpacityChanged.value = true;
-            flags.fillOpacityChanged.fillOpacity = toolArgs.fillOpacity;
-          }
-        }
-
-        if (toolName === "setLatLng") {
-          flags.latLngChanged.value = true;
-          flags.latLngChanged.lat = toolArgs.lat;
-          flags.latLngChanged.lng = toolArgs.lng;
-        }
-        toolResults.push(result);
-        finalText.push(
-          `[Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`
-        );
-  
-        messages.push({
-          role: "user",
-          content: result.content ,
-        });
-  
-        const response = await this.anthropic.messages.create({
-          model: "claude-3-5-sonnet-20241022",
-          max_tokens: 1000,
-          messages,
-        });
-  
-        finalText.push(
-          response.content[0].type === "text" ? response.content[0].text : ""
-        );
-      }
+        finalText: result.output || "No response generated",
+        flags: flags
+      };
+    } catch (error) {
+      console.error("Error in LangChain processQuery:", error);
+      return {
+        finalText: `Error processing query: ${error.message}`,
+        flags: flags
+      };
     }
-  
-    return {finalText: finalText.join("\n"), flags: flags};
   }
 }
 
-const mcpClient = new MCPClient();
+const mcpClient = new LangChainMCPClient();
 
 // Chat endpoint for LLM interactions
 app.post('/api/chat', async (req, res) => {
