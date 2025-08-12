@@ -219,6 +219,7 @@ class MCPClient {
             input_schema: tool.inputSchema,
           };
         });
+        this.tools = this.tools.filter((tool) => tool.name !== "changeDatabase");
         console.log(
           "Connected to MCP server with tools:",
           this.tools.map(({ name }) => name)
