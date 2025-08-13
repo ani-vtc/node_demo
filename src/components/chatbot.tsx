@@ -85,7 +85,28 @@ const Chatbot: React.FC = () => {
       console.log('Response:', data.response);
       
       // Add bot response for normal messages
-      const botMessage: Message = { text: data.response.finalText, isUser: false };
+      let responseText = data.response.finalText;
+      
+      // Handle case where finalText might be an object or array
+      if (typeof responseText === 'object') {
+        if (Array.isArray(responseText)) {
+          // If it's an array, extract text from each item
+          responseText = responseText.map(item => {
+            if (typeof item === 'object' && item.text) {
+              return item.text;
+            }
+            return String(item);
+          }).join(' ');
+        } else if (responseText && responseText.text) {
+          // If it's an object with a text property
+          responseText = responseText.text;
+        } else {
+          // Fallback: stringify the object
+          responseText = JSON.stringify(responseText);
+        }
+      }
+      
+      const botMessage: Message = { text: String(responseText || 'No response received'), isUser: false };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
       console.error('Error:', error);
