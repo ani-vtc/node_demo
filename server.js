@@ -148,13 +148,13 @@ class LangChainMCPClient {
       }
     }
     if (toolName === "setFill") {
-      if (toolArgs.colorFlag) {
+      if (toolArgs.dataFlag) {
         flags.fillByChanged.value = true;
-        flags.fillByChanged.fillBy = toolArgs.fillBy;
+        flags.fillByChanged.fillBy = toolArgs.fillData;
       }
       if (toolArgs.colorFlag) {
         flags.fillPalletteChanged.value = true;
-        flags.fillPalletteChanged.fillPallette = toolArgs.fillPallette;
+        flags.fillPalletteChanged.fillPallette = toolArgs.fillColor;
       }
       if (toolArgs.opacityFlag) {
         flags.fillOpacityChanged.value = true;
