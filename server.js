@@ -343,7 +343,10 @@ class LangChainMCPClient {
       throw e;
     }
   }
-  async processQuery(query) {
+  async processQuery(query, retryCount = 0) {
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+    
     try {
       // Convert message format for LangChain
       const chatHistory = [];
@@ -381,8 +384,32 @@ class LangChainMCPClient {
       };
     } catch (error) {
       console.error("Error in LangChain processQuery:", error);
+      
+      // Check if this is an overload error and we haven't exceeded retry limit
+      const isOverloadError = error.message && (
+        error.message.includes('overloaded') || 
+        error.message.includes('Overloaded') ||
+        error.message.includes('rate_limit') ||
+        error.message.includes('429')
+      );
+      
+      if (isOverloadError && retryCount < maxRetries) {
+        const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
+        console.log(`API overloaded, retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.processQuery(query, retryCount + 1);
+      }
+      
+      // If not an overload error or max retries exceeded, return user-friendly message
+      let errorMessage = "I'm currently experiencing high traffic. Please try again in a moment.";
+      
+      if (!isOverloadError) {
+        errorMessage = "I encountered an error processing your request. Please try again.";
+      }
+      
       return {
-        finalText: `Error processing query: ${error.message}`,
+        finalText: errorMessage,
         flags: flags
       };
     }

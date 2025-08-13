@@ -108,11 +108,23 @@ const Chatbot: React.FC = () => {
       
       const botMessage: Message = { text: String(responseText || 'No response received'), isUser: false };
       setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error);
+      
+      // Provide more specific error messages based on the error type
+      let errorText = 'Sorry, I encountered an error. Please try again.';
+      
+      if (error.message && error.message.includes('Failed to fetch')) {
+        errorText = 'Connection error. Please check your internet connection and try again.';
+      } else if (error.message && (error.message.includes('overloaded') || error.message.includes('429'))) {
+        errorText = 'The service is currently busy. Please wait a moment and try again.';
+      } else if (error.message && error.message.includes('timeout')) {
+        errorText = 'Request timed out. Please try again with a shorter message.';
+      }
+      
       // Add error message
       const errorMessage: Message = { 
-        text: 'Sorry, I encountered an error. Please try again.', 
+        text: errorText, 
         isUser: false 
       };
       setMessages(prev => [...prev, errorMessage]);
