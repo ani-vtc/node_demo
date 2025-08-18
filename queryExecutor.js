@@ -82,53 +82,155 @@ export class QueryExecutor {
   async executeCloudQuery(sqlQuery, options = {}) {
     const { maxRows } = options;
     
-    const parsedQuery = this.parseSelectQuery(sqlQuery);
-    if (!parsedQuery) {
-      throw new Error('Unable to parse SELECT query');
-    }
-
-    let finalQuery = sqlQuery;
+    // For cloud execution, we need to work with the anyQuery function
+    // which constructs its own SQL. Let's use a different approach.
+    
+    let finalQuery = sqlQuery.trim();
     if (maxRows && !sqlQuery.toLowerCase().includes('limit')) {
-      finalQuery = sqlQuery.replace(/;?\s*$/, ` LIMIT ${maxRows};`);
+      finalQuery = finalQuery.replace(/;?\s*$/, ` LIMIT ${maxRows}`);
+    }
+    
+    // The anyQuery function expects tbl, select, and conditions parameters
+    // but it constructs the SQL itself. For complex queries, we need to use
+    // a workaround by passing the full query directly.
+    
+    try {
+      // Use a special approach: pass the query as a "table" parameter
+      // and modify anyQuery to handle full queries
+      const [result] = await this.executeRawCloudQuery(finalQuery);
+      return Array.isArray(result) ? result : [result];
+    } catch (error) {
+      console.error('Raw query execution failed:', error);
+      
+      // Fallback: try to parse and use component-based approach
+      const parsedQuery = this.parseSelectQuery(sqlQuery);
+      if (!parsedQuery) {
+        throw new Error(`Unable to parse SELECT query: ${sqlQuery}`);
+      }
+
+      const [result] = await anyQuery({
+        prj: process.env.GCP_PROJECT_ID || "magnetic-runway-428121",
+        ds: process.env.GCP_DATASET_ID || "schools",
+        tbl: parsedQuery.table,
+        select: parsedQuery.select,
+        conditions: parsedQuery.conditions
+      });
+
+      return Array.isArray(result) ? result : [result];
+    }
+  }
+
+  async executeRawCloudQuery(fullQuery) {
+    // Create a modified version of anyQuery that accepts raw SQL
+    const baseUrl = "https://backend-v1-1010920399604.northamerica-northeast2.run.app";
+    
+    let idToken;
+    try {
+      const response = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=" + baseUrl, {
+        headers: {
+          "Metadata-Flavor": "Google"
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to get identity token: ${response.status} ${response.statusText}`);
+      }
+      
+      idToken = await response.text();
+    } catch (error) {
+      throw new Error(`Authentication failed: ${error.message}`);
     }
 
-    const [result] = await anyQuery({
-      prj: process.env.GCP_PROJECT_ID || "magnetic-runway-428121",
-      ds: process.env.GCP_DATASET_ID || "schools",
-      tbl: parsedQuery.table,
-      select: parsedQuery.select,
-      conditions: parsedQuery.conditions
+    // Prepare the request body with the full query
+    const body = {
+      fun: "get",
+      projectId: process.env.GCP_PROJECT_ID || "magnetic-runway-428121",
+      datasetId: process.env.GCP_DATASET_ID || "schools",
+      query: fullQuery
+    };
+     
+    // Make the API request
+    const apiResponse = await fetch(`${baseUrl}/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify(body)
     });
-
-    return Array.isArray(result) ? result : [result];
+    
+    // Parse the response
+    if (apiResponse.ok) {
+      const result = await apiResponse.json();
+      return [result];
+    } else {
+      const errorText = await apiResponse.text();
+      throw new Error(`API request failed: ${apiResponse.status} ${apiResponse.statusText}. Query: ${fullQuery}. Error: ${errorText}`);
+    }
   }
 
   parseSelectQuery(sqlQuery) {
     try {
-      const cleanQuery = sqlQuery.trim().toLowerCase();
+      const cleanQuery = sqlQuery.trim();
       
-      if (!cleanQuery.startsWith('select')) {
+      if (!cleanQuery.toLowerCase().startsWith('select')) {
+        console.error('Query does not start with SELECT:', cleanQuery.substring(0, 50));
         return null;
       }
 
-      const selectMatch = sqlQuery.match(/select\s+(.*?)\s+from\s+(\w+)/i);
+      // More flexible regex to handle various SELECT query formats
+      const selectMatch = cleanQuery.match(/select\s+((?:(?!from\s).)*?)\s+from\s+([`\w]+(?:\s+as\s+\w+)?)/i);
       if (!selectMatch) {
-        return null;
+        console.error('Could not parse SELECT and FROM clauses:', cleanQuery.substring(0, 100));
+        // Try a simpler approach
+        const simpleMatch = cleanQuery.match(/select\s+(.*?)\s+from\s+(\S+)/i);
+        if (!simpleMatch) {
+          return null;
+        }
+        return {
+          select: simpleMatch[1].trim() || '*',
+          table: simpleMatch[2].trim().replace(/[`;]/g, ''),
+          conditions: []
+        };
       }
 
-      const select = selectMatch[1].trim();
-      const table = selectMatch[2].trim();
+      const select = selectMatch[1].trim() || '*';
+      const table = selectMatch[2].trim().replace(/[`;]/g, '');
 
-      const whereMatch = sqlQuery.match(/where\s+(.*?)(?:\s+order\s+by|\s+group\s+by|\s+limit|\s*;?\s*$)/i);
-      const orderMatch = sqlQuery.match(/order\s+by\s+(.*?)(?:\s+limit|\s*;?\s*$)/i);
-      const groupMatch = sqlQuery.match(/group\s+by\s+(.*?)(?:\s+order\s+by|\s+limit|\s*;?\s*$)/i);
-      const limitMatch = sqlQuery.match(/limit\s+(\d+)/i);
-
+      // Extract different clauses more flexibly
       const conditions = [];
-      if (whereMatch) conditions.push(`WHERE ${whereMatch[1].trim()}`);
-      if (groupMatch) conditions.push(`GROUP BY ${groupMatch[1].trim()}`);
-      if (orderMatch) conditions.push(`ORDER BY ${orderMatch[1].trim()}`);
-      if (limitMatch) conditions.push(`LIMIT ${limitMatch[1]}`);
+      
+      // WHERE clause
+      const whereMatch = cleanQuery.match(/where\s+((?:(?!(?:group\s+by|order\s+by|limit|having)\s).)*?)(?:\s+(?:group\s+by|order\s+by|limit|having)|\s*;?\s*$)/i);
+      if (whereMatch && whereMatch[1].trim()) {
+        conditions.push(`WHERE ${whereMatch[1].trim()}`);
+      }
+
+      // GROUP BY clause
+      const groupMatch = cleanQuery.match(/group\s+by\s+((?:(?!(?:having|order\s+by|limit)\s).)*?)(?:\s+(?:having|order\s+by|limit)|\s*;?\s*$)/i);
+      if (groupMatch && groupMatch[1].trim()) {
+        conditions.push(`GROUP BY ${groupMatch[1].trim()}`);
+      }
+
+      // HAVING clause
+      const havingMatch = cleanQuery.match(/having\s+((?:(?!(?:order\s+by|limit)\s).)*?)(?:\s+(?:order\s+by|limit)|\s*;?\s*$)/i);
+      if (havingMatch && havingMatch[1].trim()) {
+        conditions.push(`HAVING ${havingMatch[1].trim()}`);
+      }
+
+      // ORDER BY clause
+      const orderMatch = cleanQuery.match(/order\s+by\s+((?:(?!limit\s).)*?)(?:\s+limit|\s*;?\s*$)/i);
+      if (orderMatch && orderMatch[1].trim()) {
+        conditions.push(`ORDER BY ${orderMatch[1].trim()}`);
+      }
+
+      // LIMIT clause
+      const limitMatch = cleanQuery.match(/limit\s+(\d+)(?:\s+offset\s+\d+)?\s*;?\s*$/i);
+      if (limitMatch) {
+        conditions.push(`LIMIT ${limitMatch[1]}`);
+      }
+
+      console.log('Parsed query successfully:', { select, table, conditions });
 
       return {
         select: select === '*' ? '*' : select,
@@ -137,6 +239,7 @@ export class QueryExecutor {
       };
     } catch (error) {
       console.error('Error parsing query:', error);
+      console.error('Query was:', sqlQuery);
       return null;
     }
   }
