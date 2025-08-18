@@ -1,5 +1,3 @@
-import Plotly from 'plotly.js';
-import { createCanvas } from 'canvas';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -357,7 +355,11 @@ export class VisualizationTool {
   }
 
   async generateHTMLPlot(data, layout, filename) {
-    const plotlyConfig = { responsive: true };
+    const plotlyConfig = { 
+      responsive: true,
+      displayModeBar: true,
+      modeBarButtonsToRemove: ['pan2d', 'lasso2d']
+    };
     const outputFilename = filename || `plot_${Date.now()}.html`;
     const filepath = path.join(this.outputDir, outputFilename);
 
@@ -365,20 +367,79 @@ export class VisualizationTool {
 <html>
 <head>
     <title>${layout.title || 'Data Visualization'}</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     <style>
-        body { margin: 20px; font-family: Arial, sans-serif; }
-        #plotDiv { width: 100%; height: ${layout.height || 600}px; }
+        body { 
+            margin: 20px; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        #plotDiv { 
+            width: 100%; 
+            height: ${layout.height || 600}px;
+            margin: 20px 0;
+        }
+        .info {
+            color: #666;
+            font-size: 14px;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f1f3f4;
+            border-radius: 4px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4285f4;
+            padding-bottom: 10px;
+        }
     </style>
 </head>
 <body>
-    <div id="plotDiv"></div>
+    <div class="container">
+        <h1>${layout.title || 'Data Visualization'}</h1>
+        <div id="plotDiv"></div>
+        <div class="info">
+            <strong>Generated:</strong> ${new Date().toLocaleString()}<br>
+            <strong>Data Points:</strong> ${Array.isArray(data) && data[0] && data[0].x ? data[0].x.length : 'N/A'}
+        </div>
+    </div>
+    
     <script>
-        const data = ${JSON.stringify(data)};
-        const layout = ${JSON.stringify(layout)};
-        const config = ${JSON.stringify(plotlyConfig)};
-        
-        Plotly.newPlot('plotDiv', data, layout, config);
+        try {
+            const data = ${JSON.stringify(data, null, 2)};
+            const layout = ${JSON.stringify(layout, null, 2)};
+            const config = ${JSON.stringify(plotlyConfig, null, 2)};
+            
+            // Enhanced layout with better styling
+            layout.font = { family: 'Segoe UI, Arial, sans-serif' };
+            layout.plot_bgcolor = 'rgba(0,0,0,0)';
+            layout.paper_bgcolor = 'rgba(0,0,0,0)';
+            layout.margin = { l: 60, r: 30, t: 80, b: 60 };
+            
+            Plotly.newPlot('plotDiv', data, layout, config)
+                .then(() => {
+                    console.log('Plot created successfully');
+                })
+                .catch((error) => {
+                    console.error('Error creating plot:', error);
+                    document.getElementById('plotDiv').innerHTML = 
+                        '<div style="text-align: center; color: red; padding: 50px;">Error creating visualization: ' + error.message + '</div>';
+                });
+        } catch (error) {
+            console.error('JavaScript error:', error);
+            document.getElementById('plotDiv').innerHTML = 
+                '<div style="text-align: center; color: red; padding: 50px;">Error loading visualization data</div>';
+        }
     </script>
 </body>
 </html>`;
