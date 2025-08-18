@@ -18,6 +18,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 dotenv.config();
 import { anyQuery } from './queryFunctions.js';
+import { DataAnalysisPipeline } from './dataAnalysisPipeline.js';
 //import Queries from './src/Queries/Queries.json' with { type: 'json' };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -110,7 +111,6 @@ class LangChainMCPClient {
 
   convertSchemaToZod(inputSchema) {
     // Convert JSON Schema to Zod schema
-    // This is a simplified converter - you may need to expand this for complex schemas
     const properties = inputSchema.properties || {};
     const zodObj = {};
     
@@ -132,7 +132,7 @@ class LangChainMCPClient {
   }
 
   handleToolFlags(toolName, toolArgs) {
-    // Handle flag updates for specific tools (same logic as before)
+    // Handle flag updates for specific tools
     if (toolName === "setStroke") {
       if (toolArgs.colorFlag) {
         flags.strokePalletteChanged.value = true;
@@ -417,6 +417,7 @@ class LangChainMCPClient {
 }
 
 const mcpClient = new LangChainMCPClient();
+const dataAnalysisPipeline = new DataAnalysisPipeline();
 
 // Chat endpoint for LLM interactions
 app.post('/api/chat', async (req, res) => {
@@ -499,6 +500,171 @@ app.get('/api/polygons/:id', async (req, res) => {
   }
 });
 
+// Data Analysis Pipeline Endpoints
+
+// Main data analysis endpoint
+app.post('/api/data-analysis', async (req, res) => {
+  try {
+    const { 
+      query, 
+      includeVisualization = true, 
+      includeSummary = true,
+      visualizationType = 'auto',
+      maxRows = 10000
+    } = req.body;
+
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: 'Query is required and must be a string' });
+    }
+
+    console.log('Processing data analysis query:', query);
+
+    const result = await dataAnalysisPipeline.processQuery(query, {
+      includeVisualization,
+      includeSummary,
+      visualizationType,
+      maxRows
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error in data analysis endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Execute custom SQL query
+app.post('/api/execute-sql', async (req, res) => {
+  try {
+    const { sqlQuery, maxRows = 10000 } = req.body;
+
+    if (!sqlQuery || typeof sqlQuery !== 'string') {
+      return res.status(400).json({ error: 'SQL query is required' });
+    }
+
+    const result = await dataAnalysisPipeline.executeCustomSQL(sqlQuery, { maxRows });
+    res.json(result);
+  } catch (error) {
+    console.error('Error in execute SQL endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Validate SQL query
+app.post('/api/validate-sql', async (req, res) => {
+  try {
+    const { sqlQuery } = req.body;
+
+    if (!sqlQuery || typeof sqlQuery !== 'string') {
+      return res.status(400).json({ error: 'SQL query is required' });
+    }
+
+    const validation = dataAnalysisPipeline.validateSQLOnly(sqlQuery);
+    res.json(validation);
+  } catch (error) {
+    console.error('Error in validate SQL endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create custom visualization
+app.post('/api/visualize', async (req, res) => {
+  try {
+    const { data, type = 'auto', title = 'Custom Visualization', width = 800, height = 600 } = req.body;
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return res.status(400).json({ error: 'Data must be a non-empty array' });
+    }
+
+    const result = await dataAnalysisPipeline.createCustomVisualization(data, {
+      type,
+      title,
+      width,
+      height,
+      format: 'html'
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error in visualize endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Generate custom summary
+app.post('/api/generate-summary', async (req, res) => {
+  try {
+    const { data, context = {} } = req.body;
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return res.status(400).json({ error: 'Data must be a non-empty array' });
+    }
+
+    const result = await dataAnalysisPipeline.generateCustomSummary(data, context);
+    res.json(result);
+  } catch (error) {
+    console.error('Error in generate summary endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get available database tables
+app.get('/api/tables', async (req, res) => {
+  try {
+    const result = await dataAnalysisPipeline.getAvailableTables();
+    res.json(result);
+  } catch (error) {
+    console.error('Error in tables endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get table schema
+app.get('/api/tables/:tableName/schema', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const result = await dataAnalysisPipeline.getTableSchema(tableName);
+    res.json(result);
+  } catch (error) {
+    console.error('Error in table schema endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// List visualizations
+app.get('/api/visualizations', async (req, res) => {
+  try {
+    const visualizations = dataAnalysisPipeline.getVisualizationList();
+    res.json({ visualizations });
+  } catch (error) {
+    console.error('Error in visualizations list endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete visualization
+app.delete('/api/visualizations/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const success = dataAnalysisPipeline.deleteVisualization(filename);
+    res.json({ success });
+  } catch (error) {
+    console.error('Error in delete visualization endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Test database connection
+app.get('/api/test-connection', async (req, res) => {
+  try {
+    const result = await dataAnalysisPipeline.testConnection();
+    res.json(result);
+  } catch (error) {
+    console.error('Error in test connection endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 function resetFlags() {
   flags = {
     databaseChanged: {value: false, database: null},
@@ -511,6 +677,13 @@ function resetFlags() {
     latLngChanged: {value: false, lat: null, lng: null}
   }
 }
+
+// Serve visualization files
+const visualizationPath = path.join(__dirname, 'visualizations');
+if (!fs.existsSync(visualizationPath)) {
+  fs.mkdirSync(visualizationPath, { recursive: true });
+}
+app.use('/visualizations', express.static(visualizationPath));
 
 // Check if dist directory exists before trying to serve static files
 const distPath = path.join(__dirname, 'dist');
