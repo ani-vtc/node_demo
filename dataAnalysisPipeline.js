@@ -82,6 +82,7 @@ export class DataAnalysisPipeline {
           schemaToUse = getSchemaContext();
         }
       }
+      console.log("Schema to use:", schemaToUse);
       
       pipeline.sqlQuery = await this.sqlGenerator.generateSQL(userInput, schemaToUse);
       pipeline.executionTime.sqlGeneration = Date.now() - sqlStart;
