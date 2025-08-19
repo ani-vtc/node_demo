@@ -78,4 +78,73 @@ export async function anyQuery({
   }
 }
 
-export default { anyQuery }; 
+export async function anyQuery_no_db({
+  prj = "magnetic-runway-428121",
+  ds = "schools",
+  tbl = "",
+  select = "*",
+  conditions = []
+} = {}) {
+  try {
+    // Base API configuration
+    const baseUrl = "https://backend-v1-1010920399604.northamerica-northeast2.run.app";
+    
+    let idToken;
+    try {
+      console.log("Attempting to get identity token...");
+      
+      const response = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=" + baseUrl, {
+        headers: {
+          "Metadata-Flavor": "Google"
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to get identity token: ${response.status} ${response.statusText}`);
+      }
+      
+      idToken = await response.text();
+      console.log("Token received successfully");
+    } catch (error) {
+      console.error("MS Connection failed. Full error:", error);
+      console.error("Error message:", error.message);
+      if (error.cause) console.error("Parent error:", error.cause);
+      throw error;
+    }
+
+    // Prepare the query
+    const query = `SELECT ${select} FROM ${tbl} ${conditions.join(" ")};`;
+    
+    // Prepare the request body
+    const body = {
+      fun: "get_no_db",
+      projectId: prj,
+      datasetId: ds,
+      query: query
+    };
+     
+    // Make the API request
+    const apiResponse = await fetch(`${baseUrl}/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify(body)
+    });
+    
+    // Parse the response
+    if (apiResponse.ok) {
+      const result = await apiResponse.json();
+      return [result];
+    } else {
+      const errorText = await apiResponse.text();
+      console.error(`API request failed: ${errorText}`);
+      throw new Error(`API request failed: ${apiResponse.status} ${apiResponse.statusText}. Query: ${query}` );
+    }
+  } catch (error) {
+    console.error("Connection failed:", error.message);
+    throw error;
+  }
+}
+export default { anyQuery, anyQuery_no_db }; 
