@@ -3,6 +3,7 @@ import { SQLValidator } from './sqlValidator.js';
 import { QueryExecutor } from './queryExecutor.js';
 import { VisualizationTool } from './visualizationTool.js';
 import { SummaryGenerator } from './summaryGenerator.js';
+import { getSchemaContext, getTableNames } from './databaseSchema.js';
 
 export class DataAnalysisPipeline {
   constructor() {
@@ -47,7 +48,42 @@ export class DataAnalysisPipeline {
       console.log('Step 1: Generating SQL query...');
       const sqlStart = Date.now();
       
-      pipeline.sqlQuery = await this.sqlGenerator.generateSQL(userInput, databaseSchema);
+      // Get schema dynamically from database if not provided
+      let schemaToUse = databaseSchema;
+      if (!schemaToUse) {
+        try {
+          // Fetch available tables and their schemas
+          const tablesResult = await this.queryExecutor.getAvailableTables();
+          if (tablesResult.length > 0) {
+            const schemaInfo = {};
+            for (const tableName of tablesResult) {
+              try {
+                const tableSchema = await this.queryExecutor.getTableSchema(tableName);
+                schemaInfo[tableName] = {
+                  table_name: tableName,
+                  columns: tableSchema
+                };
+              } catch (error) {
+                console.warn(`Failed to get schema for table ${tableName}:`, error.message);
+              }
+            }
+            
+            // Format schema for the LLM
+            schemaToUse = Object.values(schemaInfo).map(table => {
+              const columns = table.columns.map(col => {
+                return `${col.column_name || col.Field} (${col.data_type || col.Type})`;
+              }).join('\n    ');
+              
+              return `${table.table_name}:\n    ${columns}`;
+            }).join('\n\n');
+          }
+        } catch (error) {
+          console.warn('Failed to fetch dynamic schema, falling back to hardcoded:', error.message);
+          schemaToUse = getSchemaContext();
+        }
+      }
+      
+      pipeline.sqlQuery = await this.sqlGenerator.generateSQL(userInput, schemaToUse);
       pipeline.executionTime.sqlGeneration = Date.now() - sqlStart;
       
       console.log('Generated SQL:', pipeline.sqlQuery);
