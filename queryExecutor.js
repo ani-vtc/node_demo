@@ -1,5 +1,5 @@
 import mysql from 'mysql2/promise';
-import { anyQuery } from './queryFunctions.js';
+import { anyQuery, anyQuery_no_db } from './queryFunctions.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
