@@ -54,6 +54,7 @@ export class DataAnalysisPipeline {
         try {
           // Fetch available tables and their schemas
           const tablesResult = await this.queryExecutor.getAvailableTables();
+          console.log("Tables result:", tablesResult);
           if (tablesResult.length > 0) {
             const schemaInfo = {};
             for (const tableName of tablesResult) {
