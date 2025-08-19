@@ -3,7 +3,7 @@ import { SQLValidator } from './sqlValidator.js';
 import { QueryExecutor } from './queryExecutor.js';
 import { VisualizationTool } from './visualizationTool.js';
 import { SummaryGenerator } from './summaryGenerator.js';
-import { getSchemaContext, getTableNames } from './databaseSchema.js';
+import { getTableNames, getTableSchema } from './queryFunctions.js';
 
 export class DataAnalysisPipeline {
   constructor() {
@@ -62,7 +62,7 @@ export class DataAnalysisPipeline {
             for (const table in tablesResult) {
               tableName = table.Tables_in_schools;
               try {
-                const tableSchema = await this.queryExecutor.getTableSchema(tableName);
+                const tableSchema = await getTableSchema(tableName);
                 schemaInfo[tableName] = {
                   table_name: tableName,
                   columns: tableSchema
@@ -83,7 +83,7 @@ export class DataAnalysisPipeline {
           }
         } catch (error) {
           console.warn('Failed to fetch dynamic schema, falling back to hardcoded:', error.message);
-          schemaToUse = getSchemaContext();
+          // schemaToUse = getSchemaContext();
         }
       }
       console.log("Schema to use:", schemaToUse);

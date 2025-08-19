@@ -8,6 +8,8 @@
  * @param {string[]} [options.conditions=[]] - Query conditions
  * @returns {Promise<Array<Object>>} Promise containing query results
  */
+
+const prj = "magnetic-runway-428121";
 export async function anyQuery({
   prj = "magnetic-runway-428121",
   ds = "schools",
@@ -160,6 +162,28 @@ export async function getTableNames(db) {
   if (response.ok) {
     const result = await response.json();
     console.log('Table result:', result);
+    return result;
+  } else {
+    const errorText = await response.text();
+    console.error(`API request failed: ${errorText}`);
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+}
+
+export async function getTableSchema(db, table) {
+  const baseUrl = "https://backend-v1-1010920399604.northamerica-northeast2.run.app";
+  const idToken = await googleAuth();
+  const response = await fetch(`${baseUrl}/column_headers/${prj}/${db}/${table}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    }
+  });
+
+
+  if (response.ok) {
+    const result = await response.json();
+    console.log('Table schema result:', result);
     return result;
   } else {
     const errorText = await response.text();
