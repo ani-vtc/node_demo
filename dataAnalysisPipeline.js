@@ -60,7 +60,7 @@ export class DataAnalysisPipeline {
           if (Object.keys(tablesResult).length > 0) {
             const schemaInfo = {};
             for (const table in tablesResult) {
-              tableName = table.Tables_in_schools;
+              const {nothing, tableName} = table;
               try {
                 const tableSchema = await getTableSchema(tableName);
                 console.log("Table schema:", tableSchema);
