@@ -147,4 +147,25 @@ export async function anyQuery_no_db({
     throw error;
   }
 }
+
+export async function getTableNames(db) {
+  const baseUrl = "https://backend-v1-1010920399604.northamerica-northeast2.run.app";
+  const idToken = await googleAuth();
+  const response = await fetch(`${baseUrl}/tables/${db}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    }
+  });
+  if (response.ok) {
+    const result = await response.json();
+    console.log('Table result:', result);
+    return result;
+  } else {
+    const errorText = await response.text();
+    console.error(`API request failed: ${errorText}`);
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+}
+
 export default { anyQuery, anyQuery_no_db }; 
