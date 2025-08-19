@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './DataAnalysisTestPanel.css';
 
 interface QueryResult {
   success: boolean;

@@ -20,7 +20,7 @@ export class SQLGenerator {
         : '';
 
       const prompt = ChatPromptTemplate.fromTemplate(`
-You are an expert SQL query generator. Your task is to convert natural language text into valid MySQL SQL queries.
+You are an expert SQL query generator. Your task is to convert natural language text into valid MySQL SQL queries, for visualizing as a graph.
 
 ${schemaContext}Instructions:
 1. Generate a valid MySQL query based on the user's natural language request
