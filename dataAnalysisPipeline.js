@@ -63,6 +63,7 @@ export class DataAnalysisPipeline {
               tableName = table.Tables_in_schools;
               try {
                 const tableSchema = await getTableSchema(tableName);
+                console.log("Table schema:", tableSchema);
                 schemaInfo[tableName] = {
                   table_name: tableName,
                   columns: tableSchema
