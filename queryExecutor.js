@@ -97,6 +97,7 @@ export class QueryExecutor {
     try {
       // Use a special approach: pass the query as a "table" parameter
       // and modify anyQuery to handle full queries
+      console.log("Executing raw cloud query:", finalQuery);
       const [result] = await this.executeRawCloudQuery(finalQuery);
       return Array.isArray(result) ? result : [result];
     } catch (error) {
