@@ -75,7 +75,7 @@ export class DataAnalysisPipeline {
               }
             }
             
-            //schemaToUse = JSON.stringify(schemaInfo);
+            schemaToUse = schemaInfo;
           }
         } catch (error) {
           console.warn('Failed to fetch dynamic schema, falling back to hardcoded:', error.message);
