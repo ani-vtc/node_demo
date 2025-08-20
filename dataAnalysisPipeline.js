@@ -75,14 +75,7 @@ export class DataAnalysisPipeline {
               }
             }
             
-            // Format schema for the LLM
-            schemaToUse = Object.values(schemaInfo).map(table => {
-              const columns = table.columns.map(col => {
-                return `${col.column_name || col.Field} (${col.data_type || col.Type})`;
-              }).join('\n    ');
-              
-              return `${table.table_name}:\n    ${columns}`;
-            }).join('\n\n');
+            schemaToUse = JSON.stringify(schemaInfo);
           }
         } catch (error) {
           console.warn('Failed to fetch dynamic schema, falling back to hardcoded:', error.message);
