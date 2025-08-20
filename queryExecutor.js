@@ -109,7 +109,7 @@ export class QueryExecutor {
         throw new Error(`Unable to parse SELECT query: ${sqlQuery}`);
       }
 
-      const [result] = await anyQuery_no_db({
+      const [result] = await anyQuery({
         prj: process.env.GCP_PROJECT_ID || "magnetic-runway-428121",
         ds: process.env.GCP_DATASET_ID || "schools",
         tbl: parsedQuery.table,
