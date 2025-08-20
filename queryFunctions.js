@@ -187,7 +187,7 @@ export async function getTableSchema(db, table) {
     return result;
   } else {
     const errorText = await response.text();
-    console.error(`API request failed: ${errorText}`);
+    console.error(`API request failed: ${errorText}`, `Table: ${table}`, `Database: ${db}`);
     throw new Error(`API request failed: ${response.status} ${response.statusText}`);
   }
 }
