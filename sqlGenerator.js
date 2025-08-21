@@ -18,11 +18,13 @@ export class SQLGenerator {
       const schemaContext = databaseSchema 
         ? `Database Schema:\n${JSON.stringify(databaseSchema, null, 1)}\n\n`
         : '';
+      databaseSchema = databaseSchema.replace("{", "{{").replace("}", "}}");
       console.log("Schema context:", schemaContext);
+
       const prompt = ChatPromptTemplate.fromTemplate(`
 You are an expert SQL query generator. Your task is to convert natural language text into valid MySQL SQL queries, for visualizing as a graph.
 
-Instructions:
+${schemaContext} Instructions:
 1. Generate a valid MySQL query based on the user's natural language request
 2. Use proper MySQL syntax and conventions
 3. Include appropriate WHERE clauses, JOINs, and other SQL constructs as needed
