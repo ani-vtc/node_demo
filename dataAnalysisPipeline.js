@@ -62,10 +62,10 @@ export class DataAnalysisPipeline {
             const schemaInfo = {};
             for (let i = 0; i < Object.keys(tablesResult).length; i++) {
               const tableName = tablesResult[i]["Tables_in_schools"];
-              console.log("Table:", tablesResult[i], "Table name:", tableName);
+              //console.log("Table:", tablesResult[i], "Table name:", tableName);
               try {
                 const tableSchema = await getTableSchema(db, tableName);
-                console.log("Table schema:", tableSchema);
+                //console.log("Table schema:", tableSchema);
                 schemaInfo[tableName] = {
                   table_name: tableName,
                   columns: tableSchema
@@ -82,7 +82,7 @@ export class DataAnalysisPipeline {
           // schemaToUse = getSchemaContext();
         }
       }
-      console.log("Schema to use:", schemaToUse);
+      //console.log("Schema to use:", schemaToUse);
       
       pipeline.sqlQuery = await this.sqlGenerator.generateSQL(userInput, schemaToUse);
       pipeline.executionTime.sqlGeneration = Date.now() - sqlStart;

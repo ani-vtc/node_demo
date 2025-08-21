@@ -18,7 +18,7 @@ export class SQLGenerator {
       const schemaContext = databaseSchema 
         ? `Database Schema:\n${JSON.stringify(databaseSchema, null, 2)}\n\n`
         : '';
-
+      console.log("Schema context:", schemaContext);
       const prompt = ChatPromptTemplate.fromTemplate(`
 You are an expert SQL query generator. Your task is to convert natural language text into valid MySQL SQL queries, for visualizing as a graph.
 
