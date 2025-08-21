@@ -1,5 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import './DataAnalysisTestPanel.css';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  TimeScale,
+} from 'chart.js';
+import {
+  Line,
+  Bar,
+  Pie,
+  Scatter,
+} from 'react-chartjs-2';
+import 'chartjs-adapter-date-fns';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  TimeScale
+);
 
 interface QueryResult {
   success: boolean;
@@ -13,6 +46,8 @@ interface QueryResult {
       filename: string;
       url: string;
       type: string;
+      library?: string;
+      config?: any;
     };
     summary?: string;
     executionTime: {
@@ -36,8 +71,72 @@ const DataAnalysisTestPanel: React.FC = () => {
   const [includeSummary, setIncludeSummary] = useState(true);
   const [visualizationType, setVisualizationType] = useState('auto');
   const [maxRows, setMaxRows] = useState(1000);
+  const [visualizationLibrary, setVisualizationLibrary] = useState('plotly');
+  const chartRef = useRef<any>(null);
 
   const baseUrl = window.location.hostname === "localhost" ? "http://localhost:5051" : "";
+
+  const downloadChart = (format: 'png' | 'jpeg') => {
+    if (!chartRef.current) {
+      alert('Chart not ready for download');
+      return;
+    }
+
+    try {
+      const canvas = chartRef.current.canvas;
+      const url = canvas.toDataURL(`image/${format}`, 1.0);
+      const link = document.createElement('a');
+      link.download = `chart.${format}`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading chart:', error);
+      alert('Error downloading chart');
+    }
+  };
+
+  const renderChartJSVisualization = (visualization: any) => {
+    if (!visualization?.config) return null;
+
+    const config = visualization.config;
+    const chartType = config.type;
+
+    const commonOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top' as const,
+        },
+        title: {
+          display: true,
+          text: config.options?.plugins?.title?.text || 'Chart.js Visualization',
+        },
+      },
+      ...config.options,
+    };
+
+    const chartProps = {
+      ref: chartRef,
+      data: config.data,
+      options: commonOptions,
+    };
+
+    switch (chartType) {
+      case 'bar':
+        return <Bar {...chartProps} />;
+      case 'line':
+        return <Line {...chartProps} />;
+      case 'pie':
+        return <Pie {...chartProps} />;
+      case 'scatter':
+        return <Scatter {...chartProps} />;
+      default:
+        return <Bar {...chartProps} />;
+    }
+  };
 
   const handleTest = async () => {
     if (!query.trim()) return;
@@ -56,7 +155,8 @@ const DataAnalysisTestPanel: React.FC = () => {
           includeVisualization,
           includeSummary,
           visualizationType,
-          maxRows
+          maxRows,
+          visualizationLibrary
         }),
       });
 
@@ -206,7 +306,7 @@ const DataAnalysisTestPanel: React.FC = () => {
         </div>
 
         {/* Options */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div>
             <label className="flex items-center space-x-2">
               <input
@@ -231,6 +331,16 @@ const DataAnalysisTestPanel: React.FC = () => {
           </div>
           <div>
             <select
+              value={visualizationLibrary}
+              onChange={(e) => setVisualizationLibrary(e.target.value)}
+              className="text-sm border rounded p-2 w-full"
+            >
+              <option value="plotly">Plotly.js</option>
+              <option value="chartjs">Chart.js</option>
+            </select>
+          </div>
+          <div>
+            <select
               value={visualizationType}
               onChange={(e) => setVisualizationType(e.target.value)}
               className="text-sm border rounded p-2 w-full"
@@ -240,6 +350,7 @@ const DataAnalysisTestPanel: React.FC = () => {
               <option value="scatter">Scatter Plot</option>
               <option value="pie">Pie Chart</option>
               <option value="histogram">Histogram</option>
+              <option value="time_series">Time Series</option>
               <option value="table">Table</option>
             </select>
           </div>
@@ -334,17 +445,57 @@ const DataAnalysisTestPanel: React.FC = () => {
                 <div className="space-y-2">
                   <h4 className="font-semibold text-gray-700">Visualization</h4>
                   <div className="border rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-2">
-                      Type: {result.result.visualization.type} | File: {result.result.visualization.filename}
-                    </p>
-                    <a
-                      href={`${baseUrl}${result.result.visualization.url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                    >
-                      View Visualization
-                    </a>
+                    <div className="flex justify-between items-center mb-4">
+                      <p className="text-sm text-gray-600">
+                        Library: {result.result.visualization.library || 'Plotly'} | 
+                        Type: {result.result.visualization.type} | 
+                        File: {result.result.visualization.filename}
+                      </p>
+                      <div className="flex space-x-2">
+                        {result.result.visualization.library === 'chartjs' && (
+                          <>
+                            <button
+                              onClick={() => downloadChart('png')}
+                              className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+                            >
+                              Download PNG
+                            </button>
+                            <button
+                              onClick={() => downloadChart('jpeg')}
+                              className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+                            >
+                              Download JPEG
+                            </button>
+                          </>
+                        )}
+                        <a
+                          href={`${baseUrl}${result.result.visualization.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+                        >
+                          View Full
+                        </a>
+                      </div>
+                    </div>
+                    
+                    {result.result.visualization.library === 'chartjs' && result.result.visualization.config ? (
+                      <div className="h-96 w-full">
+                        {renderChartJSVisualization(result.result.visualization)}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-gray-600 mb-2">Plotly.js visualization available</p>
+                        <a
+                          href={`${baseUrl}${result.result.visualization.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                        >
+                          Open Visualization
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

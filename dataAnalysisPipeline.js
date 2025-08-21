@@ -20,7 +20,8 @@ export class DataAnalysisPipeline {
       includeSummary = true,
       visualizationType = 'auto',
       databaseSchema = null,
-      maxRows = 10000
+      maxRows = 10000,
+      visualizationLibrary = 'plotly'
     } = options;
 
     const pipeline = {
@@ -127,14 +128,35 @@ export class DataAnalysisPipeline {
         const vizStart = Date.now();
         
         try {
-          pipeline.visualization = await this.visualizationTool.createVisualization(
-            pipeline.queryResult.data,
-            {
-              type: visualizationType,
-              title: `Results for: ${userInput}`,
-              format: 'html'
-            }
-          );
+          const vizOptions = {
+            type: visualizationType,
+            title: `Results for: ${userInput}`,
+            library: visualizationLibrary
+          };
+
+          if (visualizationLibrary === 'chartjs') {
+            // For Chart.js, get both JSON config and HTML
+            const jsonResult = await this.visualizationTool.createVisualization(
+              pipeline.queryResult.data,
+              { ...vizOptions, format: 'json' }
+            );
+            const htmlResult = await this.visualizationTool.createVisualization(
+              pipeline.queryResult.data,
+              { ...vizOptions, format: 'html' }
+            );
+            
+            pipeline.visualization = {
+              ...htmlResult,
+              config: jsonResult.config,
+              library: 'chartjs'
+            };
+          } else {
+            // For Plotly, use existing format
+            pipeline.visualization = await this.visualizationTool.createVisualization(
+              pipeline.queryResult.data,
+              { ...vizOptions, format: 'html' }
+            );
+          }
           pipeline.executionTime.visualization = Date.now() - vizStart;
           console.log('Visualization created:', pipeline.visualization.filename);
         } catch (vizError) {

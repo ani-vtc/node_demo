@@ -510,20 +510,22 @@ app.post('/api/data-analysis', async (req, res) => {
       includeVisualization = true, 
       includeSummary = true,
       visualizationType = 'auto',
-      maxRows = 10000
+      maxRows = 10000,
+      visualizationLibrary = 'plotly'
     } = req.body;
 
     if (!query || typeof query !== 'string') {
       return res.status(400).json({ error: 'Query is required and must be a string' });
     }
 
-    console.log('Processing data analysis query:', query);
+    console.log('Processing data analysis query:', query, 'with library:', visualizationLibrary);
 
     const result = await dataAnalysisPipeline.processQuery(query, {
       includeVisualization,
       includeSummary,
       visualizationType,
-      maxRows
+      maxRows,
+      visualizationLibrary
     });
 
     res.json(result);
