@@ -18,7 +18,7 @@ export class SQLGenerator {
       const schemaContextRaw = databaseSchema 
         ? `Database Schema:\n${JSON.stringify(databaseSchema, null, 1)}\n\n`
         : '';
-      const schemaContext = schemaContextRaw.replaceAll("{", "{{").replace("}", "}}");
+      const schemaContext = schemaContextRaw.replaceAll("{", "{{").replaceAll("}", "}}");
       console.log("Schema context:", schemaContext);
 
       const prompt = ChatPromptTemplate.fromTemplate(`
