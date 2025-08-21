@@ -15,10 +15,10 @@ export class SQLGenerator {
 
   async generateSQL(textInput, databaseSchema = null) {
     try {
-      const schemaContext = databaseSchema 
+      const schemaContextRaw = databaseSchema 
         ? `Database Schema:\n${JSON.stringify(databaseSchema, null, 1)}\n\n`
         : '';
-      schemaContext = schemaContext.replace("{", "{{").replace("}", "}}");
+      const schemaContext = schemaContextRaw.replace("{", "{{").replace("}", "}}");
       console.log("Schema context:", schemaContext);
 
       const prompt = ChatPromptTemplate.fromTemplate(`
