@@ -30,6 +30,7 @@ ${schemaContext} Instructions:
 3. Include appropriate WHERE clauses, JOINs, and other SQL constructs as needed
 4. Return ONLY the SQL query without explanations or markdown formatting
 5. Ensure the query is safe and follows best practices
+6. ONLY use the tables and columns provided in the schema
 
 User Request: {textInput}
 
