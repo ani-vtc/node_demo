@@ -16,7 +16,7 @@ export class SQLGenerator {
   async generateSQL(textInput, databaseSchema = null) {
     try {
       const schemaContext = databaseSchema 
-        ? `Database Schema:{\n${JSON.stringify(databaseSchema, null, 2)}\n\n`
+        ? `Database Schema:\n${JSON.stringify(databaseSchema, null, 2)}\n\n`
         : '';
       console.log("Schema context:", schemaContext);
       const prompt = ChatPromptTemplate.fromTemplate(`
