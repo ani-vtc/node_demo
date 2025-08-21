@@ -165,6 +165,9 @@ const DataAnalysisTestPanel: React.FC = () => {
       }
 
       const data: QueryResult = await response.json();
+      console.log('Received result:', data);
+      console.log('Visualization data:', data.result?.visualization);
+      console.log('Summary data:', data.result?.summary);
       setResult(data);
     } catch (error: any) {
       console.error('Error:', error);
@@ -441,6 +444,10 @@ const DataAnalysisTestPanel: React.FC = () => {
               )}
 
               {/* Visualization */}
+              {(() => {
+                console.log('Checking visualization condition:', !!result.result?.visualization, result.result?.visualization);
+                return null;
+              })()}
               {result.result?.visualization && (
                 <div className="space-y-2">
                   <h4 className="font-semibold text-gray-700">Visualization</h4>
@@ -501,6 +508,10 @@ const DataAnalysisTestPanel: React.FC = () => {
               )}
 
               {/* Summary */}
+              {(() => {
+                console.log('Checking summary condition:', !!result.result?.summary, result.result?.summary);
+                return null;
+              })()}
               {result.result?.summary && (
                 <div className="space-y-2">
                   <h4 className="font-semibold text-gray-700">AI Summary</h4>

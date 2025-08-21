@@ -159,6 +159,7 @@ export class DataAnalysisPipeline {
           }
           pipeline.executionTime.visualization = Date.now() - vizStart;
           console.log('Visualization created:', pipeline.visualization.filename);
+          console.log('Visualization object:', JSON.stringify(pipeline.visualization, null, 2));
         } catch (vizError) {
           console.error('Visualization error:', vizError);
           pipeline.warnings.push(`Visualization creation failed: ${vizError.message}`);
@@ -179,6 +180,7 @@ export class DataAnalysisPipeline {
           );
           pipeline.executionTime.summary = Date.now() - summaryStart;
           console.log('Summary generated successfully');
+          console.log('Summary object:', JSON.stringify(pipeline.summary, null, 2));
         } catch (summaryError) {
           console.error('Summary generation error:', summaryError);
           pipeline.warnings.push(`Summary generation failed: ${summaryError.message}`);
