@@ -183,7 +183,6 @@ export async function getTableSchema(db, table) {
 
   if (response.ok) {
     const result = await response.json();
-    console.log('Table schema result:', result);
     return result;
   } else {
     const errorText = await response.text();
