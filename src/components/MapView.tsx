@@ -47,10 +47,103 @@ function MapCenterUpdater({ center }: { center: LatLngExpression }) {
   return null;
 }
 
+// Component for user location functionality
+// @param {function} onLocationFound - Callback when location is found
+// @param {boolean} snapOnStartup - Whether to snap to location on startup
+// @returns: JSX element with location button
+function LocationControl({ onLocationFound, snapOnStartup }: { onLocationFound: (lat: number, lng: number) => void, snapOnStartup: boolean }) {
+  const map = useMap();
+  const [isLocating, setIsLocating] = useState(false);
+
+  const snapToLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        map.setView([latitude, longitude], 15);
+        onLocationFound(latitude, longitude);
+        setIsLocating(false);
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        let errorMessage = 'Unable to get your location.';
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied. Please allow location access in your browser settings.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information unavailable.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out.';
+            break;
+        }
+        alert(errorMessage);
+        setIsLocating(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
+      }
+    );
+  };
+
+  useEffect(() => {
+    if (snapOnStartup) {
+      snapToLocation();
+    }
+  }, [snapOnStartup]);
+
+  useEffect(() => {
+    const button = document.createElement('button');
+    button.innerHTML = isLocating ? '📍 Locating...' : '📍 My Location';
+    button.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: ${isLocating ? 'default' : 'pointer'};
+      box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+      opacity: ${isLocating ? '0.6' : '1'};
+    `;
+    button.disabled = isLocating;
+    button.onclick = snapToLocation;
+
+    const mapContainer = map.getContainer();
+    mapContainer.appendChild(button);
+
+    return () => {
+      if (mapContainer.contains(button)) {
+        mapContainer.removeChild(button);
+      }
+    };
+  }, [map, isLocating]);
+
+  return null;
+}
+
 const MapView = () => {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [columnNames, setColumnNames] = useState<string[]>([]);
   const [mapCenter, setMapCenter] = useState<LatLngExpression>(defaultPosition);
+  const [snapOnStartup, setSnapOnStartup] = useState(true);
+  
+  // Handle location found callback
+  const handleLocationFound = (lat: number, lng: number) => {
+    setMapCenter([lat, lng]);
+    setSnapOnStartup(false); // Only snap automatically once
+  };
   
   // Initialize style configuration with default values
   const [styleConfig, setStyleConfig] = useState<StyleConfig>({
@@ -367,6 +460,7 @@ const MapView = () => {
             attribution='&copy; OpenStreetMap contributors'
           />
           <MapCenterUpdater center={mapCenter} />
+          <LocationControl onLocationFound={handleLocationFound} snapOnStartup={snapOnStartup} />
           {geoJsonData && (
             <GeoJSON data={geoJsonData} style={getPolygonStyle} onEachFeature={onEachFeature} />
           )}
