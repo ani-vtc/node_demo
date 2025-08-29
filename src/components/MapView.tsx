@@ -147,11 +147,25 @@ const MapView = () => {
   
 
   useEffect(() => {
-    fetch(window.location.hostname === 'localhost' ? 'http://localhost:5000/api/config' : '/api/config')
-      .then(response => response.json())
-      .then(data => {
-        setGoogleMapsApiKey(data.apiKey);
-      });
+    const fetchApiKey = async () => {
+      try {
+        const response = await fetch(window.location.hostname === 'localhost' ? 'http://localhost:5000/api/config' : '/api/config');
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
+          console.error('Failed to fetch API key:', response.status, errorData);
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('Successfully fetched API key:', !!data.apiKey);
+        setGoogleMapsApiKey(data.apiKey || '');
+      } catch (error) {
+        console.error('Error fetching API key:', error);
+      }
+    };
+
+    fetchApiKey();
   }, []);
 
   // Create bounds for better local search results (Vancouver area) when Google Maps is loaded
@@ -487,12 +501,14 @@ const MapView = () => {
         />
       </div>
       <div className="map-wrapper" style={{ flex: 1, position: 'relative' }}>
-        <AddressSearchBar
-          onPlaceSelected={handlePlaceSelected}
-          apiKey={googleMapsApiKey}
-          bounds={searchBounds}
-          countryRestriction="ca"
-        />
+        {googleMapsApiKey && (
+          <AddressSearchBar
+            onPlaceSelected={handlePlaceSelected}
+            apiKey={googleMapsApiKey}
+            bounds={searchBounds}
+            countryRestriction="ca"
+          />
+        )}
         <MapContainer
           center={defaultPosition}
           zoom={13}

@@ -418,7 +418,18 @@ class LangChainMCPClient {
 
 app.get('/api/config', async (req, res) => {
   try {
-    res.json({ apiKey: process.env.VITE_GOOGLE_MAPS_API_KEY });
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+    console.log('Config endpoint called, API key present:', !!apiKey);
+    
+    if (!apiKey) {
+      console.warn('Google Maps API key not found in environment variables');
+      return res.status(500).json({ 
+        error: 'Google Maps API key not configured',
+        debug: 'Check GOOGLE_MAPS_API_KEY environment variable' 
+      });
+    }
+    
+    res.json({ apiKey });
   } catch (error) {
     console.error('Error in config endpoint:', error);
     res.status(500).json({ error: 'Internal server error' });
