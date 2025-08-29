@@ -31,6 +31,7 @@ yarn-error.log*
 *.sln
 *.sw?
 .claude/*
+GOOGLE_MAPS_AUTOCOMPLETE_SETUP.md
 
 # OS specific
 .DS_Store

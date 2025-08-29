@@ -416,6 +416,16 @@ class LangChainMCPClient {
   }
 }
 
+app.get('/api/config', async (req, res) => {
+  try {
+    res.json({ apiKey: process.env.VITE_GOOGLE_MAPS_API_KEY });
+  } catch (error) {
+    console.error('Error in config endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 const mcpClient = new LangChainMCPClient();
 const dataAnalysisPipeline = new DataAnalysisPipeline();
 
