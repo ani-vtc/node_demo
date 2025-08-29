@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
-import './AddressSearchBar.css';
 
 interface AddressSearchBarProps {
   onPlaceSelected: (place: google.maps.places.PlaceResult) => void;
@@ -51,64 +50,90 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
 
         await loader.load();
         
-        // Small delay to ensure Google Maps is fully initialized
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        // Wait for Google Maps web components to be fully registered
+        await new Promise(resolve => {
+          if (customElements.get('gmp-autocomplete')) {
+            resolve(true);
+          } else {
+            customElements.whenDefined('gmp-autocomplete').then(resolve);
+          }
+        });
+
         setIsLoaded(true);
 
-        // Create the autocomplete element
-        const autocomplete = document.createElement('gmp-autocomplete') as google.maps.places.PlaceAutocompleteElement;
-        
-        // Set attributes
-        autocomplete.setAttribute('types', 'address');
-        autocomplete.setAttribute('fields', 'address_components,formatted_address,geometry,name,place_id,types');
-        autocomplete.setAttribute('placeholder', 'Search for an address...');
-        
-        if (countryRestriction) {
-          autocomplete.setAttribute('country-restriction', countryRestriction);
-        }
-
-        // Style the element with proper dimensions and display
-        autocomplete.style.cssText = `
-          display: block;
-          width: 100%;
-          height: auto;
-          min-height: 44px;
-          font-size: 14px;
-          font-family: 'Roboto', Arial, sans-serif;
-          border: 2px solid rgba(0,0,0,0.2);
-          border-radius: 4px;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-          outline: none;
-          background-color: white;
-          box-sizing: border-box;
-        `;
-
-        // Add event listener
-        autocomplete.addEventListener('gmp-placeselect', handlePlaceChanged);
-
-        // Add focus/blur styling with proper selectors for the internal input
-        const addFocusBlurEvents = () => {
-          const internalInput = autocomplete.querySelector('input');
-          if (internalInput) {
-            internalInput.addEventListener('focus', () => {
-              autocomplete.style.borderColor = '#4285f4';
-              autocomplete.style.boxShadow = '0 2px 6px rgba(66, 133, 244, 0.3)';
-            });
-
-            internalInput.addEventListener('blur', () => {
-              autocomplete.style.borderColor = 'rgba(0,0,0,0.2)';
-              autocomplete.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-            });
+        if (autocompleteRef.current) {
+          // Create the autocomplete element
+          const autocomplete = document.createElement('gmp-autocomplete') as google.maps.places.PlaceAutocompleteElement;
+          
+          // Set attributes first
+          autocomplete.setAttribute('types', 'address');
+          autocomplete.setAttribute('fields', 'address_components,formatted_address,geometry,name,place_id,types');
+          autocomplete.setAttribute('placeholder', 'Search for an address...');
+          
+          if (countryRestriction) {
+            autocomplete.setAttribute('country-restriction', countryRestriction);
           }
-        };
 
-        // Wait for the element to be fully initialized before setting up events
-        setTimeout(addFocusBlurEvents, 100);
+          // Add the element to the DOM first
+          autocompleteRef.current.appendChild(autocomplete);
 
-        // Replace the ref element with our autocomplete element
-        if (autocompleteRef.current && autocompleteRef.current.parentNode) {
-          autocompleteRef.current.parentNode.replaceChild(autocomplete, autocompleteRef.current);
+          // Style the element after it's in the DOM
+          const applyStyles = () => {
+            autocomplete.style.cssText = `
+              display: block !important;
+              width: 100% !important;
+              min-height: 44px !important;
+              font-size: 14px !important;
+              font-family: 'Roboto', Arial, sans-serif !important;
+              border: 2px solid rgba(0,0,0,0.2) !important;
+              border-radius: 4px !important;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+              outline: none !important;
+              background-color: white !important;
+              box-sizing: border-box !important;
+              pointer-events: auto !important;
+            `;
+          };
+
+          // Apply styles after a brief delay to ensure the element is rendered
+          setTimeout(applyStyles, 50);
+
+          // Add event listener for place selection
+          autocomplete.addEventListener('gmp-placeselect', handlePlaceChanged);
+
+          // Set up focus/blur events after the component is fully initialized
+          const setupFocusEvents = () => {
+            const internalInput = autocomplete.querySelector('input');
+            if (internalInput) {
+              internalInput.style.cssText = `
+                width: 100% !important;
+                padding: 12px 16px !important;
+                font-size: 14px !important;
+                font-family: 'Roboto', Arial, sans-serif !important;
+                border: none !important;
+                outline: none !important;
+                background: transparent !important;
+                box-sizing: border-box !important;
+              `;
+
+              internalInput.addEventListener('focus', () => {
+                autocomplete.style.borderColor = '#4285f4';
+                autocomplete.style.boxShadow = '0 2px 6px rgba(66, 133, 244, 0.3)';
+              });
+
+              internalInput.addEventListener('blur', () => {
+                autocomplete.style.borderColor = 'rgba(0,0,0,0.2)';
+                autocomplete.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+              });
+            } else {
+              // If input not found, try again after a short delay
+              setTimeout(setupFocusEvents, 100);
+            }
+          };
+
+          // Setup focus events with a delay
+          setTimeout(setupFocusEvents, 200);
+
           setAutocompleteElement(autocomplete);
         }
 
@@ -127,6 +152,10 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
     return () => {
       if (autocompleteElement) {
         autocompleteElement.removeEventListener('gmp-placeselect', handlePlaceChanged);
+        // Clean up the DOM element
+        if (autocompleteElement.parentNode) {
+          autocompleteElement.parentNode.removeChild(autocompleteElement);
+        }
       }
     };
   }, [autocompleteElement, handlePlaceChanged]);
@@ -185,14 +214,15 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
         </div>
       )}
       
-      {/* Placeholder element that gets replaced by gmp-autocomplete */}
+      {/* Container element for gmp-autocomplete */}
       {isLoaded && !hasError && (
         <div 
           ref={autocompleteRef} 
           style={{
             width: '100%',
             minHeight: '44px',
-            display: 'block'
+            display: 'block',
+            position: 'relative'
           }}
         />
       )}
