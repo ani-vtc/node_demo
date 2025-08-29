@@ -14,15 +14,13 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
   bounds, 
   countryRestriction 
 }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
+  const [autocompleteElement, setAutocompleteElement] = useState<google.maps.places.PlaceAutocompleteElement | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  const handlePlaceChanged = useCallback(() => {
-    if (!autocomplete) return;
-    
-    const place = autocomplete.getPlace();
+  const handlePlaceChanged = useCallback((event: any) => {
+    const place = event.detail.place;
     
     if (!place || !place.geometry || !place.geometry.location) {
       console.warn('No valid place selected');
@@ -30,7 +28,7 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
     }
     
     onPlaceSelected(place);
-  }, [autocomplete, onPlaceSelected]);
+  }, [onPlaceSelected]);
 
   useEffect(() => {
     const initializeGoogleMaps = async () => {
@@ -53,34 +51,51 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
         await loader.load();
         setIsLoaded(true);
 
-        if (inputRef.current) {
-          const options: google.maps.places.AutocompleteOptions = {
-            types: ['address'],
-            fields: [
-              'address_components',
-              'formatted_address', 
-              'geometry',
-              'name',
-              'place_id',
-              'types'
-            ],
-            strictBounds: false
-          };
-
-          if (bounds) {
-            options.bounds = bounds;
-          }
-
-          if (countryRestriction) {
-            options.componentRestrictions = { country: countryRestriction };
-          }
-
-          const autocompleteService = new google.maps.places.Autocomplete(inputRef.current, options);
-
-          autocompleteService.addListener('place_changed', handlePlaceChanged);
-
-          setAutocomplete(autocompleteService);
+        // Create the autocomplete element
+        const autocomplete = document.createElement('gmp-autocomplete') as google.maps.places.PlaceAutocompleteElement;
+        
+        // Set attributes
+        autocomplete.setAttribute('types', 'address');
+        autocomplete.setAttribute('fields', 'address_components,formatted_address,geometry,name,place_id,types');
+        
+        if (countryRestriction) {
+          autocomplete.setAttribute('country-restriction', countryRestriction);
         }
+
+        // Style the element
+        autocomplete.style.width = '100%';
+        autocomplete.style.fontSize = '14px';
+        autocomplete.style.fontFamily = 'Roboto, Arial, sans-serif';
+        autocomplete.style.padding = '12px 16px';
+        autocomplete.style.border = '2px solid rgba(0,0,0,0.2)';
+        autocomplete.style.borderRadius = '4px';
+        autocomplete.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+        autocomplete.style.outline = 'none';
+        autocomplete.style.backgroundColor = 'white';
+
+        // Set placeholder
+        autocomplete.setAttribute('placeholder', 'Search for an address...');
+
+        // Add event listener
+        autocomplete.addEventListener('gmp-placeselect', handlePlaceChanged);
+
+        // Add focus/blur styling
+        autocomplete.addEventListener('focus', () => {
+          autocomplete.style.borderColor = '#4285f4';
+          autocomplete.style.boxShadow = '0 2px 6px rgba(66, 133, 244, 0.3)';
+        });
+
+        autocomplete.addEventListener('blur', () => {
+          autocomplete.style.borderColor = 'rgba(0,0,0,0.2)';
+          autocomplete.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+        });
+
+        // Replace the ref element with our autocomplete element
+        if (autocompleteRef.current && autocompleteRef.current.parentNode) {
+          autocompleteRef.current.parentNode.replaceChild(autocomplete, autocompleteRef.current);
+          setAutocompleteElement(autocomplete);
+        }
+
       } catch (error) {
         console.error('Error loading Google Maps:', error);
         setHasError(true);
@@ -94,31 +109,11 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
   // Separate cleanup effect
   useEffect(() => {
     return () => {
-      if (autocomplete) {
-        google.maps.event.clearInstanceListeners(autocomplete);
+      if (autocompleteElement) {
+        autocompleteElement.removeEventListener('gmp-placeselect', handlePlaceChanged);
       }
     };
-  }, [autocomplete]);
-
-  const getPlaceholder = () => {
-    if (hasError) return "Error loading maps service";
-    if (!isLoaded) return "Loading Google Maps...";
-    return "Search for an address...";
-  };
-
-  const getInputStyle = (): React.CSSProperties => ({
-    width: '100%',
-    padding: '12px 16px',
-    fontSize: '14px',
-    border: hasError ? '2px solid #ea4335' : '2px solid rgba(0,0,0,0.2)',
-    borderRadius: '4px',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-    outline: 'none',
-    backgroundColor: hasError ? '#fdf2f2' : 'white',
-    fontFamily: 'Roboto, Arial, sans-serif',
-    color: hasError ? '#ea4335' : '#333',
-    cursor: hasError || !isLoaded ? 'not-allowed' : 'text'
-  });
+  }, [autocompleteElement, handlePlaceChanged]);
 
   return (
     <div 
@@ -132,41 +127,51 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
         fontFamily: 'Roboto, Arial, sans-serif'
       }}
     >
-      <input
-        ref={inputRef}
-        id="pac-input"
-        className="pac-input"
-        type="text"
-        placeholder={getPlaceholder()}
-        disabled={!isLoaded || hasError}
-        style={getInputStyle()}
-        onFocus={(e) => {
-          if (!hasError) {
-            e.target.style.borderColor = '#4285f4';
-            e.target.style.boxShadow = '0 2px 6px rgba(66, 133, 244, 0.3)';
-          }
-        }}
-        onBlur={(e) => {
-          if (!hasError) {
-            e.target.style.borderColor = 'rgba(0,0,0,0.2)';
-            e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-          }
-        }}
-      />
-      {hasError && (
+      {!isLoaded && !hasError && (
         <div style={{
-          fontSize: '12px',
-          color: '#ea4335',
-          marginTop: '4px',
-          padding: '0 4px'
+          width: '100%',
+          padding: '12px 16px',
+          fontSize: '14px',
+          border: '2px solid rgba(0,0,0,0.2)',
+          borderRadius: '4px',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+          backgroundColor: 'white',
+          fontFamily: 'Roboto, Arial, sans-serif',
+          color: '#666'
         }}>
-          Failed to load Google Maps. Please check your API key.
+          Loading Google Maps...
         </div>
+      )}
+      
+      {hasError && (
+        <div>
+          <div style={{
+            width: '100%',
+            padding: '12px 16px',
+            fontSize: '14px',
+            border: '2px solid #ea4335',
+            borderRadius: '4px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+            backgroundColor: '#fdf2f2',
+            fontFamily: 'Roboto, Arial, sans-serif',
+            color: '#ea4335'
+          }}>
+            Error loading maps service
+          </div>
+          <div style={{
+            fontSize: '12px',
+            color: '#ea4335',
+            marginTop: '4px',
+            padding: '0 4px'
+          }}>
+            Failed to load Google Maps. Please check your API key.
+          </div>
+        </div>
+      )}
+      
+      {/* Placeholder element that gets replaced by gmp-autocomplete */}
+      {isLoaded && !hasError && (
+        <div ref={autocompleteRef} />
       )}
     </div>
   );
