@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, GeoJSON, useMap} from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, useMap, Marker, Popup } from 'react-leaflet';
 import { useEffect, useState } from 'react';
 import type { LatLngExpression } from 'leaflet';
 import StyleControlPanel, { StyleConfig } from './StyleControlPanel';
@@ -138,10 +138,13 @@ const MapView = () => {
   const [columnNames, setColumnNames] = useState<string[]>([]);
   const [mapCenter, setMapCenter] = useState<LatLngExpression>(defaultPosition);
   const [snapOnStartup, setSnapOnStartup] = useState(true);
+  const [userLocation, setUserLocation] = useState<LatLngExpression | null>(null);
   
   // Handle location found callback
   const handleLocationFound = (lat: number, lng: number) => {
-    setMapCenter([lat, lng]);
+    const location: LatLngExpression = [lat, lng];
+    setMapCenter(location);
+    setUserLocation(location);
     setSnapOnStartup(false); // Only snap automatically once
   };
   
@@ -461,6 +464,19 @@ const MapView = () => {
           />
           <MapCenterUpdater center={mapCenter} />
           <LocationControl onLocationFound={handleLocationFound} snapOnStartup={snapOnStartup} />
+          {userLocation && (
+            <Marker position={userLocation}>
+              <Popup>
+                <div>
+                  <strong>Your Location</strong>
+                  <br />
+                  Lat: {Array.isArray(userLocation) ? userLocation[0].toFixed(6) : ''}
+                  <br />
+                  Lng: {Array.isArray(userLocation) ? userLocation[1].toFixed(6) : ''}
+                </div>
+              </Popup>
+            </Marker>
+          )}
           {geoJsonData && (
             <GeoJSON data={geoJsonData} style={getPolygonStyle} onEachFeature={onEachFeature} />
           )}
