@@ -7,6 +7,7 @@ import { color_scale } from '../data_functions/data';
 import colorbrewer from 'colorbrewer';
 import placeholder from '../assets/placeholder.png';
 import { icon } from 'leaflet';
+import AddressSearchBar from './AddressSearchBar';
 // import { all } from 'axios';
 const defaultPosition: LatLngExpression = [49.2827, -123.1207]; // Default center
 
@@ -141,6 +142,19 @@ const MapView = () => {
   const [mapCenter, setMapCenter] = useState<LatLngExpression>(defaultPosition);
   const [snapOnStartup, setSnapOnStartup] = useState(true);
   const [userLocation, setUserLocation] = useState<LatLngExpression | null>(null);
+  const [googleMapsApiKey] = useState<string>(import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '');
+  const [searchBounds, setSearchBounds] = useState<google.maps.LatLngBounds | undefined>(undefined);
+  
+  // Create bounds for better local search results (Vancouver area) when Google Maps is loaded
+  useEffect(() => {
+    if (typeof google !== 'undefined' && google.maps && google.maps.LatLngBounds) {
+      const bounds = new google.maps.LatLngBounds(
+        new google.maps.LatLng(49.0, -123.5), // Southwest
+        new google.maps.LatLng(49.5, -122.8)  // Northeast
+      );
+      setSearchBounds(bounds);
+    }
+  }, []);
   
   // Handle location found callback
   const handleLocationFound = (lat: number, lng: number) => {
@@ -148,6 +162,16 @@ const MapView = () => {
     setMapCenter(location);
     setUserLocation(location);
     setSnapOnStartup(false); // Only snap automatically once
+  };
+
+  // Handle place selection from address search
+  const handlePlaceSelected = (place: google.maps.places.PlaceResult) => {
+    if (place.geometry && place.geometry.location) {
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      const location: LatLngExpression = [lat, lng];
+      setMapCenter(location);
+    }
   };
   
   // Initialize style configuration with default values
@@ -453,7 +477,13 @@ const MapView = () => {
           columnNames={columnNames}
         />
       </div>
-      <div className="map-wrapper" style={{ flex: 1 }}>
+      <div className="map-wrapper" style={{ flex: 1, position: 'relative' }}>
+        <AddressSearchBar
+          onPlaceSelected={handlePlaceSelected}
+          apiKey={googleMapsApiKey}
+          bounds={searchBounds}
+          countryRestriction="ca"
+        />
         <MapContainer
           center={defaultPosition}
           zoom={13}
