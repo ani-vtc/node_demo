@@ -142,7 +142,7 @@ const MapView = () => {
   const [mapCenter, setMapCenter] = useState<LatLngExpression>(defaultPosition);
   const [snapOnStartup, setSnapOnStartup] = useState(true);
   const [userLocation, setUserLocation] = useState<LatLngExpression | null>(null);
-  const [googleMapsApiKey] = useState<string>(import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '');
+  const [googleMapsApiKey] = useState<string>(import.meta.env.GOOGLE_MAPS_API_KEY || '');
   const [searchBounds, setSearchBounds] = useState<google.maps.LatLngBounds | undefined>(undefined);
   
   // Create bounds for better local search results (Vancouver area) when Google Maps is loaded
