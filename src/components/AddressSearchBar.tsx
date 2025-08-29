@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
+import './AddressSearchBar.css';
 
 interface AddressSearchBarProps {
   onPlaceSelected: (place: google.maps.places.PlaceResult) => void;
@@ -49,6 +50,10 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
         });
 
         await loader.load();
+        
+        // Small delay to ensure Google Maps is fully initialized
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         setIsLoaded(true);
 
         // Create the autocomplete element
@@ -57,38 +62,49 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
         // Set attributes
         autocomplete.setAttribute('types', 'address');
         autocomplete.setAttribute('fields', 'address_components,formatted_address,geometry,name,place_id,types');
+        autocomplete.setAttribute('placeholder', 'Search for an address...');
         
         if (countryRestriction) {
           autocomplete.setAttribute('country-restriction', countryRestriction);
         }
 
-        // Style the element
-        autocomplete.style.width = '100%';
-        autocomplete.style.fontSize = '14px';
-        autocomplete.style.fontFamily = 'Roboto, Arial, sans-serif';
-        autocomplete.style.padding = '12px 16px';
-        autocomplete.style.border = '2px solid rgba(0,0,0,0.2)';
-        autocomplete.style.borderRadius = '4px';
-        autocomplete.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-        autocomplete.style.outline = 'none';
-        autocomplete.style.backgroundColor = 'white';
-
-        // Set placeholder
-        autocomplete.setAttribute('placeholder', 'Search for an address...');
+        // Style the element with proper dimensions and display
+        autocomplete.style.cssText = `
+          display: block;
+          width: 100%;
+          height: auto;
+          min-height: 44px;
+          font-size: 14px;
+          font-family: 'Roboto', Arial, sans-serif;
+          border: 2px solid rgba(0,0,0,0.2);
+          border-radius: 4px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          outline: none;
+          background-color: white;
+          box-sizing: border-box;
+        `;
 
         // Add event listener
         autocomplete.addEventListener('gmp-placeselect', handlePlaceChanged);
 
-        // Add focus/blur styling
-        autocomplete.addEventListener('focus', () => {
-          autocomplete.style.borderColor = '#4285f4';
-          autocomplete.style.boxShadow = '0 2px 6px rgba(66, 133, 244, 0.3)';
-        });
+        // Add focus/blur styling with proper selectors for the internal input
+        const addFocusBlurEvents = () => {
+          const internalInput = autocomplete.querySelector('input');
+          if (internalInput) {
+            internalInput.addEventListener('focus', () => {
+              autocomplete.style.borderColor = '#4285f4';
+              autocomplete.style.boxShadow = '0 2px 6px rgba(66, 133, 244, 0.3)';
+            });
 
-        autocomplete.addEventListener('blur', () => {
-          autocomplete.style.borderColor = 'rgba(0,0,0,0.2)';
-          autocomplete.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-        });
+            internalInput.addEventListener('blur', () => {
+              autocomplete.style.borderColor = 'rgba(0,0,0,0.2)';
+              autocomplete.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+            });
+          }
+        };
+
+        // Wait for the element to be fully initialized before setting up events
+        setTimeout(addFocusBlurEvents, 100);
 
         // Replace the ref element with our autocomplete element
         if (autocompleteRef.current && autocompleteRef.current.parentNode) {
@@ -171,7 +187,14 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
       
       {/* Placeholder element that gets replaced by gmp-autocomplete */}
       {isLoaded && !hasError && (
-        <div ref={autocompleteRef} />
+        <div 
+          ref={autocompleteRef} 
+          style={{
+            width: '100%',
+            minHeight: '44px',
+            display: 'block'
+          }}
+        />
       )}
     </div>
   );
