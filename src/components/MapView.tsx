@@ -5,6 +5,8 @@ import StyleControlPanel, { StyleConfig } from './StyleControlPanel';
 import './StyleControlPanel.css';
 import { color_scale } from '../data_functions/data';
 import colorbrewer from 'colorbrewer';
+import placeholder from '../assets/placeholder.png';
+import { icon } from 'leaflet';
 // import { all } from 'axios';
 const defaultPosition: LatLngExpression = [49.2827, -123.1207]; // Default center
 
@@ -465,7 +467,7 @@ const MapView = () => {
           <MapCenterUpdater center={mapCenter} />
           <LocationControl onLocationFound={handleLocationFound} snapOnStartup={snapOnStartup} />
           {userLocation && (
-            <Marker position={userLocation}>
+            <Marker icon={icon({iconUrl: placeholder})} position={userLocation}>
               <Popup>
                 <div>
                   <strong>Your Location</strong>
