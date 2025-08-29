@@ -27,3 +27,4 @@ dist-ssr
 .cursorignore
 .env
 .claude/*
+GOOGLE_MAPS_AUTOCOMPLETE_SETUP.md

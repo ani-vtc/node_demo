@@ -142,7 +142,7 @@ const MapView = () => {
   const [mapCenter, setMapCenter] = useState<LatLngExpression>(defaultPosition);
   const [snapOnStartup, setSnapOnStartup] = useState(true);
   const [userLocation, setUserLocation] = useState<LatLngExpression | null>(null);
-  const [googleMapsApiKey] = useState<string>(import.meta.env.GOOGLE_MAPS_API_KEY || '');
+  const [googleMapsApiKey] = useState<string>(import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '');
   const [searchBounds, setSearchBounds] = useState<google.maps.LatLngBounds | undefined>(undefined);
   
   // Create bounds for better local search results (Vancouver area) when Google Maps is loaded
@@ -497,7 +497,15 @@ const MapView = () => {
           <MapCenterUpdater center={mapCenter} />
           <LocationControl onLocationFound={handleLocationFound} snapOnStartup={snapOnStartup} />
           {userLocation && (
-            <Marker icon={icon({iconUrl: placeholder})} position={userLocation}>
+            <Marker 
+              icon={icon({
+                iconUrl: placeholder,
+                iconSize: [40, 40], // Width, Height in pixels
+                iconAnchor: [20, 40], // Point that corresponds to marker's location [x, y] - bottom center
+                popupAnchor: [0, -40] // Point from which popup opens relative to iconAnchor
+              })} 
+              position={userLocation}
+            >
               <Popup>
                 <div>
                   <strong>Your Location</strong>

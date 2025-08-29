@@ -11,6 +11,10 @@ RUN npm ci
 # Copy all source files
 COPY . .
 
+# Get the API key from .env file
+ARG GOOGLE_MAPS_API_KEY
+ENV VITE_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+
 # Build the frontend
 RUN npm run build
 
