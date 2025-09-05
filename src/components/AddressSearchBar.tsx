@@ -48,7 +48,7 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
           region: countryRestriction?.toUpperCase()
         });
 
-        await loader.load();
+        await loader.importLibrary('places');
         console.log('Google Maps API loaded successfully');
         
         // Allow time for Google Maps to fully initialize
