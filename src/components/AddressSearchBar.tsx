@@ -3,7 +3,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 
 
 interface AddressSearchBarProps {
-  onPlaceSelected: (place: google.maps.places.PlaceResult) => void;
+  onPlaceSelected: (place: google.maps.places.Place) => void;
   apiKey: string;
   bounds?: google.maps.LatLngBounds;
   countryRestriction?: string;
@@ -35,7 +35,9 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
 
     placesService.current.getDetails(request, (place, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-        onPlaceSelected(place);
+        // Create a Place object from PlaceResult for compatibility
+        const placeObject = place as google.maps.places.Place;
+        onPlaceSelected(placeObject);
       } else {
         console.error('Place details request failed:', status);
       }

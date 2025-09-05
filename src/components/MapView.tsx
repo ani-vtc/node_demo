@@ -223,12 +223,12 @@ const MapView = () => {
   };
 
   // Handle place selection from address search
-  const handlePlaceSelected = (place: google.maps.places.PlaceResult) => {
-    if (place.geometry && place.geometry.location) {
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
+  const handlePlaceSelected = (place: google.maps.places.Place) => {
+    if (place.location) {
+      const lat = place.location.lat();
+      const lng = place.location.lng();
       const location: LatLngExpression = [lat, lng];
-      const addressName = place.formatted_address || place.name || 'Selected Address';
+      const addressName = place.formattedAddress || place.displayName || 'Selected Address';
       
       // Set the selected address which will trigger the AddressSnapControl
       setSelectedAddress({ location, name: addressName });
