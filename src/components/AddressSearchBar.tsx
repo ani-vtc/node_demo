@@ -128,43 +128,90 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
           // Add a generic event listener to catch all events for debugging
           debugListener.current = (event: Event) => {
             console.log('🔍 Generic event caught:', event.type, event);
+            console.log('🎯 Event target:', event.target);
+            console.log('🎯 Event target text:', (event.target as HTMLElement)?.textContent);
+            console.log('🎯 Event target innerHTML:', (event.target as HTMLElement)?.innerHTML);
             
             // If it's a click event, try to extract place information
             if (event.type === 'click') {
               console.log('🖱️ Click detected, attempting to extract place info...');
               
-              // Add a small delay to allow the autocomplete to populate the input
-              setTimeout(() => {
-                const input = autocompleteElement.querySelector('input');
-                if (input && input.value) {
-                  console.log('📝 Input value found after delay:', input.value);
+              // First, try to get address from the clicked element
+              const clickedElement = event.target as HTMLElement;
+              const clickedText = clickedElement?.textContent?.trim();
+              
+              if (clickedText && clickedText.length > 5 && clickedText.includes(',')) {
+                console.log('📍 Found address in clicked element:', clickedText);
+                
+                // Use the clicked text directly for geocoding
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ address: clickedText }, (results, status) => {
+                  console.log('🌍 Geocoding results from clicked text:', { status, results });
                   
-                  // Use Geocoding service as fallback
-                  const geocoder = new google.maps.Geocoder();
-                  geocoder.geocode({ address: input.value }, (results, status) => {
-                    console.log('🌍 Geocoding results:', { status, results });
+                  if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+                    const result = results[0];
+                    console.log('✅ Geocoding successful from clicked text:', result);
                     
-                    if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
-                      const result = results[0];
-                      console.log('✅ Geocoding successful:', result);
+                    const placeObject = {
+                      location: result.geometry.location,
+                      formattedAddress: result.formatted_address,
+                      displayName: result.formatted_address
+                    } as google.maps.places.Place;
+                    
+                    console.log('🚀 Calling onPlaceSelected from clicked text with:', placeObject);
+                    onPlaceSelected(placeObject);
+                    return; // Exit early if successful
+                  } else {
+                    console.error('❌ Geocoding failed for clicked text:', status);
+                  }
+                });
+              }
+              
+              const tryExtractPlace = (delay: number, attempt: number) => {
+                setTimeout(() => {
+                  const input = autocompleteElement.querySelector('input');
+                  console.log(`🔍 Attempt ${attempt} (${delay}ms delay) - Input found:`, !!input);
+                  console.log(`🔍 Input value:`, input?.value || 'EMPTY');
+                  console.log(`🔍 Input placeholder:`, input?.placeholder || 'NO_PLACEHOLDER');
+                  console.log(`🔍 Input attributes:`, input ? Array.from(input.attributes).map(a => `${a.name}="${a.value}"`).join(', ') : 'NO_INPUT');
+                  
+                  if (input && input.value && input.value.trim().length > 0) {
+                    console.log('📝 Input value found after delay:', input.value);
+                    
+                    // Use Geocoding service as fallback
+                    const geocoder = new google.maps.Geocoder();
+                    geocoder.geocode({ address: input.value }, (results, status) => {
+                      console.log('🌍 Geocoding results:', { status, results });
                       
-                      // Create a place object from geocoding result
-                      const placeObject = {
-                        location: result.geometry.location,
-                        formattedAddress: result.formatted_address,
-                        displayName: result.formatted_address
-                      } as google.maps.places.Place;
-                      
-                      console.log('🚀 Calling onPlaceSelected from click handler with:', placeObject);
-                      onPlaceSelected(placeObject);
-                    } else {
-                      console.error('❌ Geocoding failed:', status);
-                    }
-                  });
-                } else {
-                  console.log('❓ No input value found after delay');
-                }
-              }, 100);
+                      if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+                        const result = results[0];
+                        console.log('✅ Geocoding successful:', result);
+                        
+                        // Create a place object from geocoding result
+                        const placeObject = {
+                          location: result.geometry.location,
+                          formattedAddress: result.formatted_address,
+                          displayName: result.formatted_address
+                        } as google.maps.places.Place;
+                        
+                        console.log('🚀 Calling onPlaceSelected from click handler with:', placeObject);
+                        onPlaceSelected(placeObject);
+                      } else {
+                        console.error('❌ Geocoding failed:', status);
+                      }
+                    });
+                  } else if (attempt < 5) {
+                    console.log(`❓ No input value found after ${delay}ms delay, trying again...`);
+                    // Try again with longer delay
+                    tryExtractPlace(delay * 2, attempt + 1);
+                  } else {
+                    console.log('❌ Failed to extract input value after multiple attempts');
+                  }
+                }, delay);
+              };
+              
+              // Start with 100ms delay and retry with increasing delays
+              tryExtractPlace(100, 1);
             }
             
             // Also try to handle change events
