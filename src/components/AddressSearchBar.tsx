@@ -135,7 +135,8 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
         left: '20px',
         zIndex: 1000,
         width: '300px',
-        fontFamily: 'Roboto, Arial, sans-serif'
+        fontFamily: 'Roboto, Arial, sans-serif',
+        color: '#000'
       }}
     >
       {!isLoaded && !hasError && (
