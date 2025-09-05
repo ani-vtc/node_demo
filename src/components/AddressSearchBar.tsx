@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 
+
 interface AddressSearchBarProps {
   onPlaceSelected: (place: google.maps.places.PlaceResult) => void;
   apiKey: string;
@@ -11,26 +12,39 @@ interface AddressSearchBarProps {
 const AddressSearchBar: React.FC<AddressSearchBarProps> = ({ 
   onPlaceSelected, 
   apiKey, 
-  bounds, 
   countryRestriction 
 }) => {
   const autocompleteRef = useRef<HTMLDivElement>(null);
-  const [autocompleteElement, setAutocompleteElement] = useState<google.maps.places.PlaceAutocompleteElement | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const placesService = useRef<google.maps.places.PlacesService | null>(null);
 
-  const handlePlaceChanged = useCallback((event: any) => {
-    const place = event.detail.place;
+  const handlePlaceChanged = useCallback(async (event: Event) => {
+    const customEvent = event as CustomEvent<{place_id: string}>;
+    const placeId = customEvent.detail.place_id;
     
-    if (!place || !place.geometry || !place.geometry.location) {
-      console.warn('No valid place selected');
+    if (!placeId || !placesService.current) {
+      console.warn('No valid place ID or Places service not available');
       return;
     }
-    
-    onPlaceSelected(place);
+
+    const request = {
+      placeId: placeId,
+      fields: ['address_components', 'formatted_address', 'geometry', 'name', 'place_id', 'types']
+    };
+
+    placesService.current.getDetails(request, (place, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+        onPlaceSelected(place);
+      } else {
+        console.error('Place details request failed:', status);
+      }
+    });
   }, [onPlaceSelected]);
 
   useEffect(() => {
+    const containerElement = autocompleteRef.current;
+    
     const initializeGoogleMaps = async () => {
       if (!apiKey) {
         console.warn('Google Maps API key not provided');
@@ -44,120 +58,54 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
         const loader = new Loader({
           apiKey: apiKey,
           version: 'weekly',
-          libraries: ['places'],
-          region: countryRestriction?.toUpperCase()
+          libraries: ['places']
         });
 
         await loader.importLibrary('places');
         console.log('Google Maps API loaded successfully');
         
-        // Allow time for Google Maps to fully initialize
-        await new Promise(resolve => setTimeout(resolve, 500));
-        console.log('Initialization delay completed');
+        // Initialize Places service for place details retrieval
+        const mapDiv = document.createElement('div');
+        const map = new google.maps.Map(mapDiv, {
+          center: { lat: 0, lng: 0 },
+          zoom: 1
+        });
+        placesService.current = new google.maps.places.PlacesService(map);
 
-        if (autocompleteRef.current) {
-          try {
-            // Test if we can create the gmp-autocomplete element
-            console.log('Attempting to create gmp-autocomplete element...');
-            const autocomplete = document.createElement('gmp-autocomplete') as google.maps.places.PlaceAutocompleteElement;
-            
-            if (!autocomplete || autocomplete.tagName !== 'GMP-AUTOCOMPLETE') {
-              throw new Error('Failed to create gmp-autocomplete element');
-            }
-            
-            console.log('gmp-autocomplete element created successfully');
-            
-            // Set attributes first
-            autocomplete.setAttribute('types', 'address');
-            autocomplete.setAttribute('fields', 'address_components,formatted_address,geometry,name,place_id,types');
-            autocomplete.setAttribute('placeholder', 'Search for an address...');
-            
-            if (countryRestriction) {
-              autocomplete.setAttribute('country-restriction', countryRestriction);
-            }
-
-            console.log('Attributes set, adding to DOM...');
-            
-            // Add the element to the DOM first
-            autocompleteRef.current.appendChild(autocomplete);
-            console.log('Element added to DOM successfully');
-            
-            // Style the element after it's in the DOM
-            const applyStyles = () => {
-              autocomplete.style.cssText = `
-                display: block !important;
-                width: 100% !important;
-                min-height: 44px !important;
-                font-size: 14px !important;
-                font-family: 'Roboto', Arial, sans-serif !important;
-                border: 2px solid rgba(0,0,0,0.2) !important;
-                border-radius: 4px !important;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
-                outline: none !important;
-                background-color: white !important;
-                box-sizing: border-box !important;
-                pointer-events: auto !important;
-              `;
-              console.log('Styles applied to autocomplete element');
-            };
-
-            // Apply styles after a brief delay to ensure the element is rendered
-            setTimeout(applyStyles, 50);
-
-            // Add event listener for place selection
-            autocomplete.addEventListener('gmp-placeselect', handlePlaceChanged);
-            console.log('Event listener added for place selection');
-
-            // Set up focus/blur events after the component is fully initialized
-            const setupFocusEvents = () => {
-              const internalInput = autocomplete.querySelector('input');
-              if (internalInput) {
-                console.log('Internal input found, setting up focus events');
-                internalInput.style.cssText = `
-                  width: 100% !important;
-                  padding: 12px 16px !important;
-                  font-size: 14px !important;
-                  font-family: 'Roboto', Arial, sans-serif !important;
-                  border: none !important;
-                  outline: none !important;
-                  background: transparent !important;
-                  box-sizing: border-box !important;
-                `;
-
-                internalInput.addEventListener('focus', () => {
-                  autocomplete.style.borderColor = '#4285f4';
-                  autocomplete.style.boxShadow = '0 2px 6px rgba(66, 133, 244, 0.3)';
-                });
-
-                internalInput.addEventListener('blur', () => {
-                  autocomplete.style.borderColor = 'rgba(0,0,0,0.2)';
-                  autocomplete.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-                });
-              } else {
-                console.log('Internal input not found yet, retrying...');
-                // If input not found, try again after a short delay
-                setTimeout(setupFocusEvents, 100);
-              }
-            };
-
-            // Setup focus events with a delay
-            setTimeout(setupFocusEvents, 200);
-
-            setAutocompleteElement(autocomplete);
-            setIsLoaded(true);
-            console.log('AddressSearchBar initialization completed successfully');
-            
-          } catch (elementError) {
-            console.error('Failed to create or setup gmp-autocomplete element:', elementError);
-            setHasError(true);
-            setIsLoaded(false);
+        if (containerElement) {
+          // Create the basic place autocomplete element
+          const autocompleteElement = document.createElement('gmp-basic-place-autocomplete');
+          autocompleteElement.setAttribute('placeholder', 'Search for an address...');
+          
+          if (countryRestriction) {
+            autocompleteElement.setAttribute('included-region-codes', countryRestriction);
           }
-        } else {
-          console.error('autocompleteRef.current is null');
-          setHasError(true);
-          setIsLoaded(false);
+
+          // Apply styles
+          Object.assign(autocompleteElement.style, {
+            display: 'block',
+            width: '100%',
+            minHeight: '44px',
+            fontSize: '14px',
+            fontFamily: 'Roboto, Arial, sans-serif',
+            border: '2px solid rgba(0,0,0,0.2)',
+            borderRadius: '4px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+            backgroundColor: 'white',
+            boxSizing: 'border-box'
+          });
+
+          // Add event listener for place selection
+          autocompleteElement.addEventListener('gmp-placeselect', handlePlaceChanged);
+          console.log('Event listener added for place selection');
+
+          // Append to container
+          containerElement.appendChild(autocompleteElement);
         }
 
+        setIsLoaded(true);
+        console.log('Basic Place Autocomplete initialization completed successfully');
+        
       } catch (error) {
         console.error('Error loading Google Maps:', error);
         setHasError(true);
@@ -166,24 +114,21 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
     };
 
     initializeGoogleMaps();
-  }, [apiKey, bounds, countryRestriction, handlePlaceChanged]);
-
-  // Separate cleanup effect
-  useEffect(() => {
+    
     return () => {
-      if (autocompleteElement) {
-        autocompleteElement.removeEventListener('gmp-placeselect', handlePlaceChanged);
-        // Clean up the DOM element
-        if (autocompleteElement.parentNode) {
-          autocompleteElement.parentNode.removeChild(autocompleteElement);
+      if (containerElement) {
+        const autocompleteElement = containerElement.querySelector('gmp-basic-place-autocomplete');
+        if (autocompleteElement) {
+          autocompleteElement.removeEventListener('gmp-placeselect', handlePlaceChanged);
+          containerElement.removeChild(autocompleteElement);
         }
       }
     };
-  }, [autocompleteElement, handlePlaceChanged]);
+  }, [apiKey, countryRestriction, handlePlaceChanged]);
 
   return (
     <div 
-      className="pac-container"
+      className="address-search-container"
       style={{
         position: 'absolute',
         top: '20px',
@@ -235,16 +180,15 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
         </div>
       )}
       
-      {/* Container element for gmp-autocomplete */}
-      <div 
-        ref={autocompleteRef} 
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          display: isLoaded && !hasError ? 'block' : 'none',
-          position: 'relative'
-        }}
-      />
+      {isLoaded && !hasError && (
+        <div 
+          ref={autocompleteRef}
+          style={{
+            width: '100%',
+            minHeight: '44px'
+          }}
+        />
+      )}
     </div>
   );
 };
