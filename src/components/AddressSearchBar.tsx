@@ -55,16 +55,6 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
         await new Promise(resolve => setTimeout(resolve, 500));
         console.log('Initialization delay completed');
 
-        // Wait for the ref to be available
-        let retryCount = 0;
-        const maxRetries = 10;
-        
-        while (!autocompleteRef.current && retryCount < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          retryCount++;
-          console.log(`Waiting for autocompleteRef, attempt ${retryCount}`);
-        }
-
         if (autocompleteRef.current) {
           try {
             // Test if we can create the gmp-autocomplete element
@@ -246,17 +236,15 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
       )}
       
       {/* Container element for gmp-autocomplete */}
-      {isLoaded && !hasError && (
-        <div 
-          ref={autocompleteRef} 
-          style={{
-            width: '100%',
-            minHeight: '44px',
-            display: 'block',
-            position: 'relative'
-          }}
-        />
-      )}
+      <div 
+        ref={autocompleteRef} 
+        style={{
+          width: '100%',
+          minHeight: '44px',
+          display: isLoaded && !hasError ? 'block' : 'none',
+          position: 'relative'
+        }}
+      />
     </div>
   );
 };
