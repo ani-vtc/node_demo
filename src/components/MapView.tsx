@@ -11,19 +11,6 @@ import AddressSearchBar from './AddressSearchBar';
 // import { all } from 'axios';
 const defaultPosition: LatLngExpression = [49.2827, -123.1207]; // Default center
 
-// Create a red marker icon for selected addresses
-const addressIcon = icon({
-  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="40" height="40">
-      <circle cx="12" cy="12" r="10" fill="#ea4335" stroke="white" stroke-width="2"/>
-      <circle cx="12" cy="12" r="4" fill="white"/>
-    </svg>
-  `),
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-  popupAnchor: [0, -20]
-});
-
 // Create a component to setup panes when the map is ready
 // @param none - No parameters
 // @returns: none
@@ -50,42 +37,21 @@ function SetupMapPanes() {
 
 // Component to handle map center updates
 // @param {LatLngExpression} center - The new center coordinates
+// @param {boolean} shouldZoom - Whether to zoom to level 15
 // @returns: null
-function MapCenterUpdater({ center }: { center: LatLngExpression }) {
+function MapCenterUpdater({ center, shouldZoom }: { center: LatLngExpression, shouldZoom?: boolean }) {
   const map = useMap();
   
   useEffect(() => {
     if (center) {
-      map.setView(center, map.getZoom());
+      const zoom = shouldZoom ? 15 : map.getZoom();
+      map.setView(center, zoom);
     }
-  }, [center, map]);
+  }, [center, shouldZoom, map]);
   
   return null;
 }
 
-// Component to handle address snapping functionality
-// @param {object} selectedAddress - The selected address to snap to
-// @param {function} onAddressSnapped - Callback when address snap is complete
-// @returns: null (invisible component)
-function AddressSnapControl({ selectedAddress, onAddressSnapped }: { 
-  selectedAddress: {location: LatLngExpression, name: string} | null, 
-  onAddressSnapped: () => void 
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    console.log('🎯 AddressSnapControl effect triggered with selectedAddress:', selectedAddress);
-    if (selectedAddress) {
-      console.log('🗺️ Snapping to address:', selectedAddress.location);
-      // Snap to the selected address with the same zoom level as location button
-      map.setView(selectedAddress.location, 15);
-      console.log('✅ Map view updated, calling onAddressSnapped');
-      onAddressSnapped();
-    }
-  }, [selectedAddress, map, onAddressSnapped]);
-
-  return null;
-}
 
 // Component for user location functionality
 // @param {function} onLocationFound - Callback when location is found
@@ -179,9 +145,9 @@ const MapView = () => {
   const [mapCenter, setMapCenter] = useState<LatLngExpression>(defaultPosition);
   const [snapOnStartup, setSnapOnStartup] = useState(true);
   const [userLocation, setUserLocation] = useState<LatLngExpression | null>(null);
-  const [selectedAddress, setSelectedAddress] = useState<{location: LatLngExpression, name: string} | null>(null);
+  const [selectedAddressName, setSelectedAddressName] = useState<string | null>(null);
+  const [shouldZoom, setShouldZoom] = useState(false);
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>('');
-  const [searchBounds, setSearchBounds] = useState<google.maps.LatLngBounds | undefined>(undefined);
   
 
   useEffect(() => {
@@ -206,16 +172,6 @@ const MapView = () => {
     fetchApiKey();
   }, []);
 
-  // Create bounds for better local search results (Vancouver area) when Google Maps is loaded
-  useEffect(() => {
-    if (typeof google !== 'undefined' && google.maps && google.maps.LatLngBounds) {
-      const bounds = new google.maps.LatLngBounds(
-        new google.maps.LatLng(49.0, -123.5), // Southwest
-        new google.maps.LatLng(49.5, -122.8)  // Northeast
-      );
-      setSearchBounds(bounds);
-    }
-  }, []);
   
   // Handle location found callback
   const handleLocationFound = (lat: number, lng: number) => {
@@ -226,30 +182,23 @@ const MapView = () => {
   };
 
   // Handle place selection from address search
-  const handlePlaceSelected = (place: google.maps.places.Place) => {
-    console.log('🎯 MapView received place selection:', place);
+  const handlePlaceSelected = (lat: number, lng: number, address: string) => {
+    console.log('🎯 MapView received place selection:', { lat, lng, address });
     
-    if (place.location) {
-      console.log('📍 Extracting coordinates from place.location:', place.location);
-      const lat = place.location.lat();
-      const lng = place.location.lng();
-      const location: LatLngExpression = [lat, lng];
-      const addressName = place.formattedAddress || place.displayName || 'Selected Address';
-      
-      console.log('🗺️ Setting selected address:', { location, name: addressName });
-      
-      // Set the selected address which will trigger the AddressSnapControl
-      setSelectedAddress({ location, name: addressName });
-    } else {
-      console.warn('❌ No location found in place object:', place);
-    }
+    const location: LatLngExpression = [lat, lng];
+    console.log('🗺️ Setting user location to selected address:', { location, name: address });
+    
+    // Replace user location with selected address and store the address name
+    setUserLocation(location);
+    setSelectedAddressName(address);
+    setMapCenter(location);
+    setShouldZoom(true);
+    setSnapOnStartup(false);
+    
+    // Reset zoom flag after a brief delay
+    setTimeout(() => setShouldZoom(false), 100);
   };
 
-  // Handle address snap completion
-  const handleAddressSnapped = () => {
-    // Optional: You can add any post-snap logic here if needed
-    console.log('Address snap completed');
-  };
   
   // Initialize style configuration with default values
   const [styleConfig, setStyleConfig] = useState<StyleConfig>({
@@ -559,7 +508,6 @@ const MapView = () => {
           <AddressSearchBar
             onPlaceSelected={handlePlaceSelected}
             apiKey={googleMapsApiKey}
-            bounds={searchBounds}
             countryRestriction="ca"
           />
         )}
@@ -573,9 +521,8 @@ const MapView = () => {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; OpenStreetMap contributors'
           />
-          <MapCenterUpdater center={mapCenter} />
+          <MapCenterUpdater center={mapCenter} shouldZoom={shouldZoom} />
           <LocationControl onLocationFound={handleLocationFound} snapOnStartup={snapOnStartup} />
-          <AddressSnapControl selectedAddress={selectedAddress} onAddressSnapped={handleAddressSnapped} />
           {userLocation && (
             <Marker 
               icon={icon({
@@ -588,29 +535,17 @@ const MapView = () => {
             >
               <Popup>
                 <div>
-                  <strong>Your Location</strong>
+                  <strong>{selectedAddressName ? 'Selected Location' : 'Your Location'}</strong>
+                  {selectedAddressName && (
+                    <>
+                      <br />
+                      {selectedAddressName}
+                    </>
+                  )}
                   <br />
                   Lat: {Array.isArray(userLocation) ? userLocation[0].toFixed(6) : ''}
                   <br />
                   Lng: {Array.isArray(userLocation) ? userLocation[1].toFixed(6) : ''}
-                </div>
-              </Popup>
-            </Marker>
-          )}
-          {selectedAddress && (
-            <Marker 
-              icon={addressIcon}
-              position={selectedAddress.location}
-            >
-              <Popup>
-                <div>
-                  <strong>Selected Address</strong>
-                  <br />
-                  {selectedAddress.name}
-                  <br />
-                  Lat: {Array.isArray(selectedAddress.location) ? selectedAddress.location[0].toFixed(6) : ''}
-                  <br />
-                  Lng: {Array.isArray(selectedAddress.location) ? selectedAddress.location[1].toFixed(6) : ''}
                 </div>
               </Popup>
             </Marker>
