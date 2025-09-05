@@ -128,6 +128,75 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
           // Add a generic event listener to catch all events for debugging
           debugListener.current = (event: Event) => {
             console.log('🔍 Generic event caught:', event.type, event);
+            
+            // If it's a click event, try to extract place information
+            if (event.type === 'click') {
+              console.log('🖱️ Click detected, attempting to extract place info...');
+              
+              // Add a small delay to allow the autocomplete to populate the input
+              setTimeout(() => {
+                const input = autocompleteElement.querySelector('input');
+                if (input && input.value) {
+                  console.log('📝 Input value found after delay:', input.value);
+                  
+                  // Use Geocoding service as fallback
+                  const geocoder = new google.maps.Geocoder();
+                  geocoder.geocode({ address: input.value }, (results, status) => {
+                    console.log('🌍 Geocoding results:', { status, results });
+                    
+                    if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+                      const result = results[0];
+                      console.log('✅ Geocoding successful:', result);
+                      
+                      // Create a place object from geocoding result
+                      const placeObject = {
+                        location: result.geometry.location,
+                        formattedAddress: result.formatted_address,
+                        displayName: result.formatted_address
+                      } as google.maps.places.Place;
+                      
+                      console.log('🚀 Calling onPlaceSelected from click handler with:', placeObject);
+                      onPlaceSelected(placeObject);
+                    } else {
+                      console.error('❌ Geocoding failed:', status);
+                    }
+                  });
+                } else {
+                  console.log('❓ No input value found after delay');
+                }
+              }, 100);
+            }
+            
+            // Also try to handle change events
+            if (event.type === 'change' || event.type === 'input') {
+              console.log('📝 Input change detected, attempting to extract place info...');
+              
+              setTimeout(() => {
+                const input = autocompleteElement.querySelector('input');
+                if (input && input.value && input.value.length > 5) { // Only process if meaningful input
+                  console.log('📝 Input value found from change event:', input.value);
+                  
+                  const geocoder = new google.maps.Geocoder();
+                  geocoder.geocode({ address: input.value }, (results, status) => {
+                    console.log('🌍 Geocoding results from change:', { status, results });
+                    
+                    if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+                      const result = results[0];
+                      console.log('✅ Geocoding successful from change:', result);
+                      
+                      const placeObject = {
+                        location: result.geometry.location,
+                        formattedAddress: result.formatted_address,
+                        displayName: result.formatted_address
+                      } as google.maps.places.Place;
+                      
+                      console.log('🚀 Calling onPlaceSelected from change handler with:', placeObject);
+                      onPlaceSelected(placeObject);
+                    }
+                  });
+                }
+              }, 200);
+            }
           };
           
           ['gmp-placeselect', 'place_changed', 'gmp-place-select', 'click', 'change', 'input'].forEach(eventType => {
@@ -138,6 +207,78 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
 
           // Append to container
           containerElement.appendChild(autocompleteElement);
+          
+          // Add MutationObserver to watch for input value changes
+          setTimeout(() => {
+            const input = autocompleteElement.querySelector('input');
+            if (input) {
+              console.log('🔍 Setting up MutationObserver for input changes');
+              
+              let lastValue = '';
+              const observer = new MutationObserver(() => {
+                if (input.value !== lastValue && input.value.length > 5) {
+                  console.log('🔄 Input value changed via MutationObserver:', input.value);
+                  lastValue = input.value;
+                  
+                  // Use geocoding to get place info
+                  const geocoder = new google.maps.Geocoder();
+                  geocoder.geocode({ address: input.value }, (results, status) => {
+                    if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+                      const result = results[0];
+                      console.log('✅ Geocoding successful from MutationObserver:', result);
+                      
+                      const placeObject = {
+                        location: result.geometry.location,
+                        formattedAddress: result.formatted_address,
+                        displayName: result.formatted_address
+                      } as google.maps.places.Place;
+                      
+                      console.log('🚀 Calling onPlaceSelected from MutationObserver with:', placeObject);
+                      onPlaceSelected(placeObject);
+                    }
+                  });
+                }
+              });
+              
+              observer.observe(input, {
+                attributes: true,
+                attributeFilter: ['value'],
+                childList: true,
+                subtree: true
+              });
+              
+              // Also use setInterval as a fallback
+              const intervalCheck = setInterval(() => {
+                if (input.value !== lastValue && input.value.length > 5) {
+                  console.log('🔄 Input value changed via interval:', input.value);
+                  lastValue = input.value;
+                  
+                  const geocoder = new google.maps.Geocoder();
+                  geocoder.geocode({ address: input.value }, (results, status) => {
+                    if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+                      const result = results[0];
+                      console.log('✅ Geocoding successful from interval:', result);
+                      
+                      const placeObject = {
+                        location: result.geometry.location,
+                        formattedAddress: result.formatted_address,
+                        displayName: result.formatted_address
+                      } as google.maps.places.Place;
+                      
+                      console.log('🚀 Calling onPlaceSelected from interval with:', placeObject);
+                      onPlaceSelected(placeObject);
+                    }
+                  });
+                }
+              }, 500);
+              
+              // Clean up interval after 10 seconds
+              setTimeout(() => {
+                clearInterval(intervalCheck);
+                observer.disconnect();
+              }, 10000);
+            }
+          }, 1000);
         }
 
         setIsLoaded(true);
