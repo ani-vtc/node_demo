@@ -4,6 +4,7 @@ gmp-basic-place-autocomplete {
   width: 100% !important;
   min-height: 44px !important;
   box-sizing: border-box !important;
+  
 }
 
 gmp-basic-place-autocomplete input {
@@ -15,6 +16,7 @@ gmp-basic-place-autocomplete input {
   outline: none !important;
   background: transparent !important;
   box-sizing: border-box !important;
+  color: #000 !important;
 }
 
 /* Focus styles for the basic place autocomplete */
