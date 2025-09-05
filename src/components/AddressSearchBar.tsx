@@ -18,10 +18,15 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
+  const debugListener = useRef<((event: Event) => void) | null>(null);
 
   const handlePlaceChanged = useCallback(async (event: Event) => {
+    console.log('🎯 Place selection event triggered:', event);
     const customEvent = event as CustomEvent<{place_id: string}>;
-    const placeId = customEvent.detail.place_id;
+    const placeId = customEvent.detail?.place_id;
+    
+    console.log('📍 Place ID received:', placeId);
+    console.log('🗺️ Places service available:', !!placesService.current);
     
     if (!placeId || !placesService.current) {
       console.warn('No valid place ID or Places service not available');
@@ -33,13 +38,30 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
       fields: ['address_components', 'formatted_address', 'geometry', 'name', 'place_id', 'types']
     };
 
+    console.log('🔍 Making place details request for:', request);
+
     placesService.current.getDetails(request, (place, status) => {
+      console.log('📋 Place details response:', { status, place });
+      
       if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-        // Create a Place object from PlaceResult for compatibility
-        const placeObject = place as google.maps.places.Place;
+        console.log('✅ Place details received successfully:', {
+          name: place.name,
+          formatted_address: place.formatted_address,
+          geometry: place.geometry
+        });
+        
+        // The place returned by getDetails is already a PlaceResult, 
+        // but we need to convert it to work with our Place interface
+        const placeObject = {
+          location: place.geometry?.location,
+          formattedAddress: place.formatted_address,
+          displayName: place.name
+        } as google.maps.places.Place;
+        
+        console.log('🚀 Calling onPlaceSelected with:', placeObject);
         onPlaceSelected(placeObject);
       } else {
-        console.error('Place details request failed:', status);
+        console.error('❌ Place details request failed:', status);
       }
     });
   }, [onPlaceSelected]);
@@ -98,8 +120,21 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
           });
 
           // Add event listener for place selection
+          // Try multiple event names since the documentation might vary
           autocompleteElement.addEventListener('gmp-placeselect', handlePlaceChanged);
-          console.log('Event listener added for place selection');
+          autocompleteElement.addEventListener('place_changed', handlePlaceChanged);
+          autocompleteElement.addEventListener('gmp-place-select', handlePlaceChanged);
+          
+          // Add a generic event listener to catch all events for debugging
+          debugListener.current = (event: Event) => {
+            console.log('🔍 Generic event caught:', event.type, event);
+          };
+          
+          ['gmp-placeselect', 'place_changed', 'gmp-place-select', 'click', 'change', 'input'].forEach(eventType => {
+            autocompleteElement.addEventListener(eventType, debugListener.current!);
+          });
+          
+          console.log('Event listeners added for place selection with debug listeners');
 
           // Append to container
           containerElement.appendChild(autocompleteElement);
@@ -122,6 +157,15 @@ const AddressSearchBar: React.FC<AddressSearchBarProps> = ({
         const autocompleteElement = containerElement.querySelector('gmp-basic-place-autocomplete');
         if (autocompleteElement) {
           autocompleteElement.removeEventListener('gmp-placeselect', handlePlaceChanged);
+          autocompleteElement.removeEventListener('place_changed', handlePlaceChanged);
+          autocompleteElement.removeEventListener('gmp-place-select', handlePlaceChanged);
+          
+          if (debugListener.current) {
+            ['gmp-placeselect', 'place_changed', 'gmp-place-select', 'click', 'change', 'input'].forEach(eventType => {
+              autocompleteElement.removeEventListener(eventType, debugListener.current!);
+            });
+          }
+          
           containerElement.removeChild(autocompleteElement);
         }
       }

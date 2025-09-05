@@ -74,9 +74,12 @@ function AddressSnapControl({ selectedAddress, onAddressSnapped }: {
   const map = useMap();
 
   useEffect(() => {
+    console.log('🎯 AddressSnapControl effect triggered with selectedAddress:', selectedAddress);
     if (selectedAddress) {
+      console.log('🗺️ Snapping to address:', selectedAddress.location);
       // Snap to the selected address with the same zoom level as location button
       map.setView(selectedAddress.location, 15);
+      console.log('✅ Map view updated, calling onAddressSnapped');
       onAddressSnapped();
     }
   }, [selectedAddress, map, onAddressSnapped]);
@@ -224,14 +227,21 @@ const MapView = () => {
 
   // Handle place selection from address search
   const handlePlaceSelected = (place: google.maps.places.Place) => {
+    console.log('🎯 MapView received place selection:', place);
+    
     if (place.location) {
+      console.log('📍 Extracting coordinates from place.location:', place.location);
       const lat = place.location.lat();
       const lng = place.location.lng();
       const location: LatLngExpression = [lat, lng];
       const addressName = place.formattedAddress || place.displayName || 'Selected Address';
       
+      console.log('🗺️ Setting selected address:', { location, name: addressName });
+      
       // Set the selected address which will trigger the AddressSnapControl
       setSelectedAddress({ location, name: addressName });
+    } else {
+      console.warn('❌ No location found in place object:', place);
     }
   };
 
